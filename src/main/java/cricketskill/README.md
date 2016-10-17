@@ -15,7 +15,7 @@ To run this example skill you need to do two things. The first is to deploy the 
 5. Select the runtime as Java 8
 6. Go to the the samples/ directory containing pom.xml, and run 'mvn assembly:assembly -DdescriptorId=jar-with-dependencies package'. This will generate a zip file named "alexa-skills-kit-samples-1.0-jar-with-dependencies.jar" in the target directory.
 7. Select Code entry type as "Upload a .ZIP file" and then upload the "alexa-skills-kit-samples-1.0-jar-with-dependencies.jar" file from the build directory to Lambda
-8. Set the Handler as helloworld.HelloWorldSpeechletRequestStreamHandler (this refers to the Lambda RequestStreamHandler file in the zip).
+8. Set the Handler as helloworld.CricketSpeechletRequestStreamHandler (this refers to the Lambda RequestStreamHandler file in the zip).
 9. Create a basic execution role and click create.
 10. Leave the Advanced settings as the defaults.
 11. Click "Next" and review the settings then click "Create Function"

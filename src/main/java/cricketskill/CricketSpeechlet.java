@@ -44,8 +44,8 @@ public class CricketSpeechlet implements Speechlet {
         Intent intent = request.getIntent();
         String intentName = (intent != null) ? intent.getName() : null;
 
-        if ("HelloWorldIntent".equals(intentName)) {
-            return getHelloResponse();
+        if ("CurrentScoreIntent".equals(intentName)) {
+            return getCurrentScoreResponse();
         } else if ("AMAZON.HelpIntent".equals(intentName)) {
             return getHelpResponse();
         } else {
@@ -67,11 +67,11 @@ public class CricketSpeechlet implements Speechlet {
      * @return SpeechletResponse spoken and visual response for the given intent
      */
     private SpeechletResponse getWelcomeResponse() {
-        String speechText = "Welcome to the Alexa Skills Kit, you can say hello";
+        String speechText = "Welcome to the Alexa Skills Kit, you can say what is the current score";
 
         // Create the Simple card content.
         SimpleCard card = new SimpleCard();
-        card.setTitle("HelloWorld");
+        card.setTitle("Current Score");
         card.setContent(speechText);
 
         // Create the plain text output.
@@ -90,12 +90,12 @@ public class CricketSpeechlet implements Speechlet {
      *
      * @return SpeechletResponse spoken and visual response for the given intent
      */
-    private SpeechletResponse getHelloResponse() {
-        String speechText = "Hello Monika. How is California?";
+    private SpeechletResponse getCurrentScoreResponse() {
+        String speechText = "This is when I would have an answer, if Sriram did any work";
 
         // Create the Simple card content.
         SimpleCard card = new SimpleCard();
-        card.setTitle("HelloWorld");
+        card.setTitle("Current Score");
         card.setContent(speechText);
 
         // Create the plain text output.
@@ -111,11 +111,11 @@ public class CricketSpeechlet implements Speechlet {
      * @return SpeechletResponse spoken and visual response for the given intent
      */
     private SpeechletResponse getHelpResponse() {
-        String speechText = "You can say hello to me!";
+        String speechText = "You can say give me an update on the games to me!";
 
         // Create the Simple card content.
         SimpleCard card = new SimpleCard();
-        card.setTitle("HelloWorld");
+        card.setTitle("Current Score - Help");
         card.setContent(speechText);
 
         // Create the plain text output.

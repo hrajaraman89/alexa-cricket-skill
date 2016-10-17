@@ -19,7 +19,7 @@ public final class CricketSpeechletRequestStreamHandler extends SpeechletRequest
          * This Id can be found on https://developer.amazon.com/edw/home.html#/ "Edit" the relevant
          * Alexa Skill and put the relevant Application Ids in this Set.
          */
-        supportedApplicationIds.add("amzn1.ask.skill.45df9d16-3243-4fc8-a6e9-35587fe5b9f3");
+        supportedApplicationIds.add("amzn1.ask.skill.df054977-bd58-49b7-8ba0-befb1c36ecbf");
     }
 
     public CricketSpeechletRequestStreamHandler() {

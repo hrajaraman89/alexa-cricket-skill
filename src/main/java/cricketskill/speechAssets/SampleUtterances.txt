@@ -1,7 +1,6 @@
-HelloWorldIntent say hello
-HelloWorldIntent say hello world
-HelloWorldIntent hello
-HelloWorldIntent say hi
-HelloWorldIntent say hi world
-HelloWorldIntent hi
-HelloWorldIntent how are you
+CurrentScoreIntent current score
+CurrentScoreIntent what is the current score
+CurrentScoreIntent who is playing
+CurrentScoreIntent what team is playing
+CurrentScoreIntent what games are on
+CurrentScoreIntent give me an update on the games

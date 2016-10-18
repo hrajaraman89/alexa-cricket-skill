@@ -12,18 +12,21 @@ import com.amazon.speech.speechlet.SpeechletResponse;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
-import java.util.ArrayList;
+import cricketskill.api.CricketApiClient;
+import cricketskill.model.GameDetail;
+import cricketskill.model.MatchStatus;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.NodeList;
-import us.monoid.web.Resty;
 
 
 public class CricketSpeechlet implements Speechlet {
   private static final Logger log = LoggerFactory.getLogger(CricketSpeechlet.class);
+  private final CricketApiClient _client;
+
+  public CricketSpeechlet() {
+    _client = new CricketApiClient();
+  }
 
   @Override
   public void onSessionStarted(final SessionStartedRequest request, final Session session)
@@ -67,11 +70,6 @@ public class CricketSpeechlet implements Speechlet {
     // any cleanup logic goes here
   }
 
-  /**
-   * Creates and returns a {@code SpeechletResponse} with a welcome message.
-   *
-   * @return SpeechletResponse spoken and visual response for the given intent
-   */
   private SpeechletResponse getWelcomeResponse() {
     String speechText = "Welcome to the Alexa Skills Kit, you can say what is the current score";
 
@@ -91,24 +89,27 @@ public class CricketSpeechlet implements Speechlet {
     return SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
-  /**
-   * Creates a {@code SpeechletResponse} for the hello intent.
-   *
-   * @return SpeechletResponse spoken and visual response for the given intent
-   */
   public SpeechletResponse getCurrentScoreResponse() {
 
-    StringBuilder sb = new StringBuilder("Here are the first five venues at which cricket is being played today:");
+    long start = System.currentTimeMillis();
 
-    List<String> venues = getVenues();
+    List<GameDetail> result = _client.getDetails();
 
-    for (int i = 0; i < Math.min(5, venues.size()); i++) {
-      sb.append(" ").append(i + 1)
-          .append(venues.get(i))
+    StringBuilder sb = new StringBuilder(String.format("There are a total of %d games. ", result.size()));
+
+    for (int i = 0; i < result.size(); i++) {
+      sb.append(" ")
+          .append(i + 1)
           .append(". ");
+
+      appendDetailToStringBuilder(sb, result.get(i));
     }
 
-    sb.append(".");
+    long end = System.currentTimeMillis();
+
+    sb.append("Api response took ")
+        .append((end - start))
+        .append(" milliseconds.");
 
     String speechText = sb.toString();
 
@@ -124,23 +125,15 @@ public class CricketSpeechlet implements Speechlet {
     return SpeechletResponse.newTellResponse(speech, card);
   }
 
-  private static List<String> getVenues() {
-    try {
-      NodeList matches = new Resty().xml("http://synd.cricbuzz.com/j2me/1.0/livematches.xml")
-          .get("mchdata/match");
-
-      List<String> vcountry = IntStream.range(0, matches.getLength()).boxed()
-          .map(matches::item)
-          .filter(m -> m.getAttributes().getNamedItem("vcountry") != null)
-          .map(m -> m.getAttributes().getNamedItem("vcountry").getNodeValue())
-          .collect(Collectors.toList());
-
-      return vcountry;
-    } catch (Exception e) {
-      ArrayList<String> list = new ArrayList<>();
-      list.add(e.getMessage());
-      return list;
-    }
+  private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
+    sb.append(gd.getTeamA().getName())
+        .append(String.format(" %s ", gd.getStatus() == MatchStatus.COMPLETE ? "played" : "is playing"))
+        .append(gd.getTeamB().getName())
+        .append(" at ")
+        .append(gd.getVenue())
+        .append(". ")
+        .append(gd.getLiveStatus())
+        .append(". ");
   }
 
   /**

@@ -1,19 +1,26 @@
 package cricketskill.model;
 
+import com.google.gson.Gson;
+
+
 public class Team {
-  private final String _name;
-  private final int _id;
+  private final String name;
+  private final int id;
 
   public Team(String name, int id) {
-    _name = name;
-    _id = id;
+    this.name = name;
+    this.id = id;
   }
 
   public String getName() {
-    return _name;
+    return name;
   }
 
   public int getId() {
-    return _id;
+    return id;
+  }
+
+  public String toJson() {
+    return new Gson().toJson(this);
   }
 }

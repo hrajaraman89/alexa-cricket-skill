@@ -1,5 +1,6 @@
 package cricketskill.api;
 
+import java.util.Optional;
 import org.junit.Test;
 
 
@@ -9,6 +10,8 @@ public class CricketApiClientTest {
   public void testGetDetails()
       throws Exception {
 
-    new CricketApiClient().getDetails().forEach(System.out::println);
+    new CricketApiClient(i -> Optional.empty())
+        .getDetails()
+        .forEach(System.out::println);
   }
 }

@@ -13,6 +13,7 @@ import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import cricketskill.api.CricketApiClient;
+import cricketskill.db.DynamoDbClient;
 import cricketskill.model.GameDetail;
 import cricketskill.model.MatchStatus;
 import java.util.List;
@@ -23,9 +24,11 @@ import org.slf4j.LoggerFactory;
 public class CricketSpeechlet implements Speechlet {
   private static final Logger log = LoggerFactory.getLogger(CricketSpeechlet.class);
   private final CricketApiClient _client;
+  private final DynamoDbClient _dbClient;
 
   public CricketSpeechlet() {
-    _client = new CricketApiClient();
+    _dbClient = new DynamoDbClient();
+    _client = new CricketApiClient(_dbClient::getGame);
   }
 
   @Override
@@ -54,7 +57,7 @@ public class CricketSpeechlet implements Speechlet {
     String intentName = (intent != null) ? intent.getName() : null;
 
     if ("CurrentScoreIntent".equals(intentName)) {
-      return getCurrentScoreResponse();
+        return getCurrentScoreResponse();
     } else if ("AMAZON.HelpIntent".equals(intentName)) {
       return getHelpResponse();
     } else {
@@ -74,26 +77,18 @@ public class CricketSpeechlet implements Speechlet {
     String speechText = "Welcome to the Alexa Skills Kit, you can say what is the current score";
 
     // Create the Simple card content.
-    SimpleCard card = new SimpleCard();
-    card.setTitle("Current Score");
-    card.setContent(speechText);
-
-    // Create the plain text output.
-    PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-    speech.setText(speechText);
-
-    // Create reprompt
-    Reprompt reprompt = new Reprompt();
-    reprompt.setOutputSpeech(speech);
-
-    return SpeechletResponse.newAskResponse(speech, reprompt, card);
+    return newResponse(speechText, "Current Score");
   }
 
   public SpeechletResponse getCurrentScoreResponse() {
 
+    log.info("Getting current response");
+
     long start = System.currentTimeMillis();
 
     List<GameDetail> result = _client.getDetails();
+
+    result.forEach(_dbClient::updateGame);
 
     StringBuilder sb = new StringBuilder(String.format("There are a total of %d games. ", result.size()));
 
@@ -143,10 +138,14 @@ public class CricketSpeechlet implements Speechlet {
    */
   private SpeechletResponse getHelpResponse() {
     String speechText = "You can say give me an update on the games to me!";
+    String title = "Current Score - Help";
+    return newResponse(speechText, title);
+  }
 
+  private SpeechletResponse newResponse(String speechText, String title) {
     // Create the Simple card content.
     SimpleCard card = new SimpleCard();
-    card.setTitle("Current Score - Help");
+    card.setTitle(title);
     card.setContent(speechText);
 
     // Create the plain text output.

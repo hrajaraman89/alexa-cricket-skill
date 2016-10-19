@@ -1,89 +1,81 @@
 package cricketskill.model;
 
 import com.google.gson.Gson;
-import java.util.Arrays;
-import java.util.Optional;
 
 
 public class GameDetail {
-  private int _id;
-  private Team _teamA;
-  private Team _teamB;
-  private String _venue;
-  private Optional<Team> _winner;
-  private MatchStatus _status;
-  private String _liveStatus;
+  private int id;
+  private Team teamA;
+  private Team teamB;
+  private String venue;
+  private MatchStatus status;
+  private String liveStatus;
+  private int winnerId;
 
   public GameDetail setId(int id) {
-    _id = id;
+    this.id = id;
     return this;
   }
 
   public GameDetail setTeamA(Team teamA) {
-    _teamA = teamA;
+    this.teamA = teamA;
     return this;
   }
 
   public GameDetail setTeamB(Team teamB) {
-    _teamB = teamB;
+    this.teamB = teamB;
     return this;
   }
 
   public GameDetail setVenue(String venue) {
-    _venue = venue;
+    this.venue = venue;
     return this;
   }
 
   public GameDetail setWinnerId(int winnerId) {
-    _winner = Optional.of(winnerId)
-        .filter(i -> i != 0)
-        .flatMap(wId -> Arrays.asList(_teamA, _teamB)
-            .stream()
-            .filter(t -> t.getId() == wId)
-            .findFirst());
-
+    this.winnerId = winnerId;
     return this;
   }
 
   public int getId() {
-    return _id;
+    return id;
   }
 
   public Team getTeamA() {
-    return _teamA;
+    return teamA;
   }
 
   public Team getTeamB() {
-    return _teamB;
+    return teamB;
   }
 
   public String getVenue() {
-    return _venue;
+    return venue;
   }
 
   public String toString() {
     return new Gson().toJson(this);
   }
 
-  public Optional<Team> getWinner() {
-    return _winner;
-  }
-
   public GameDetail setStatus(MatchStatus status) {
-    _status = status;
+    this.status = status;
     return this;
   }
 
   public MatchStatus getStatus() {
-    return _status;
+    return status;
   }
 
   public String getLiveStatus() {
-    return _liveStatus;
+    return liveStatus;
   }
 
   public GameDetail setLiveStatus(String liveStatus) {
-    _liveStatus = liveStatus;
+    this.liveStatus = liveStatus;
     return this;
+  }
+
+  public int getWinnerId() {
+    return winnerId;
   }
 }

@@ -1,5 +1,6 @@
 package cricketskill.api;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import cricketskill.model.GameDetail;
 import cricketskill.model.MatchStatus;
@@ -22,6 +23,12 @@ public class CricketApiClient {
   private static final String API_URL_TO_GET_MATCH_DETAIL_FORMAT =
       "http://www.espncricinfo.com/ci/engine/match/%d.json";
 
+  private final Function<Integer, Optional<GameDetail>> _cacheFunction;
+
+  public CricketApiClient(Function<Integer, Optional<GameDetail>> cacheFunction) {
+    _cacheFunction = cacheFunction;
+  }
+
   public List<GameDetail> getDetails() {
 
     List<Integer> gameIds = getGameIds();
@@ -38,6 +45,13 @@ public class CricketApiClient {
   }
 
   private Optional<GameDetail> getGameDetail(int id) {
+
+    Optional<GameDetail> cacheResult = _cacheFunction.apply(id);
+
+    if (cacheResult.isPresent()) {
+      return cacheResult;
+    }
+
     String url = String.format(API_URL_TO_GET_MATCH_DETAIL_FORMAT, id);
 
     Optional<JSONResource> jsonOptional = safeJsonOp(() -> new Resty().json(url));

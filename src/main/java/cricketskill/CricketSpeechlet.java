@@ -90,14 +90,6 @@ public class CricketSpeechlet implements Speechlet {
 
     List<GameDetail> result = _client.getDetails();
 
-    result.stream()
-        .filter(g -> !g.isCachedResult())
-        .map(s -> {
-          log.info("{} is not cached. Writing to DB", s.getId());
-          return s;
-        })
-        .forEach(_dbClient::updateGame);
-
     StringBuilder sb = new StringBuilder(String.format("There are a total of %d games. ", result.size()));
 
     for (int i = 0; i < result.size(); i++) {
@@ -107,6 +99,14 @@ public class CricketSpeechlet implements Speechlet {
 
       appendDetailToStringBuilder(sb, result.get(i));
     }
+
+    result.stream()
+        .filter(g -> !g.isCachedResult())
+        .map(s -> {
+          log.info("{} is not cached. Writing to DB", s.getId());
+          return s;
+        })
+        .forEach(_dbClient::updateGame);
 
     long end = System.currentTimeMillis();
 

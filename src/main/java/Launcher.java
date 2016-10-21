@@ -22,7 +22,6 @@ import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import session.SessionSpeechlet;
 
 /**
  * Shared launcher for executing all sample skills within a single servlet container.
@@ -83,7 +82,6 @@ public final class Launcher {
         server.setHandler(context);
 
         context.addServlet(new ServletHolder(createServlet(new CricketSpeechlet())), "/cricket");
-        context.addServlet(new ServletHolder(createServlet(new SessionSpeechlet())), "/session");
         server.start();
         server.join();
     }

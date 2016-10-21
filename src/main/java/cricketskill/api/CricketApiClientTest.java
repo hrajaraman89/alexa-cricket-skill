@@ -1,7 +1,7 @@
 package cricketskill.api;
 
 import com.amazonaws.Protocol;
-import cricketskill.db.DynamoDbClient;
+import cricketskill.io.DynamoDbClient;
 import cricketskill.model.GameDetailClientResult;
 import org.junit.Test;
 

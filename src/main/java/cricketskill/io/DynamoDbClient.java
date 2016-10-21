@@ -1,4 +1,4 @@
-package cricketskill.db;
+package cricketskill.io;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;

@@ -14,16 +14,19 @@ import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import cricketskill.api.CricketApiClient;
 import cricketskill.common.TrackerUtils;
-import cricketskill.db.DynamoDbClient;
+import cricketskill.io.DynamoDbClient;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,17 @@ public class CricketSpeechlet implements Speechlet {
 
   private static final int PAGE_LENGTH = 3;
   static final String START_KEY = "start";
+
+  private final Map<String, BiFunction<Intent, Session, SpeechletResponse>> _intentToHandler = ImmutableMap.of(
+      "CurrentScoreIntent",
+      (i, s) -> getCurrentScoreResponse(s),
+      "AMAZON.HelpIntent",
+      (i, s) -> getHelpResponse(),
+      "NextScoreIntent",
+      this::nextScoreIntent,
+      "EndIntent",
+      (i, s) -> handleEndIntent()
+  );
 
   public CricketSpeechlet() {
     this(Protocol.HTTP);
@@ -79,27 +93,29 @@ public class CricketSpeechlet implements Speechlet {
     LOG.info("onIntent requestId={}, sessionId={}", request.getRequestId(),
         session.getSessionId());
 
+    Supplier<SpeechletException> onError = () -> new SpeechletException("Intent name is null");
+
     Intent intent = request.getIntent();
-    String intentName = (intent != null) ? intent.getName() : null;
 
-    if ("CurrentScoreIntent".equals(intentName)) {
-      return getCurrentScoreResponse(session);
-    } else if ("AMAZON.HelpIntent".equals(intentName)) {
-      return getHelpResponse();
-    } else if ("OscarIntent".equals(intentName)) {
-      return newAskResponse("Oscar... is the best team, as long as they don't do work tomorrow.", "Oscar");
-    } else if ("NextScoreIntent".equals(intentName)) {
-      Slot slot = intent.getSlot("NumberOfGames");
+    return Optional.ofNullable(intent)
+        .map(Intent::getName)
+        .filter(_intentToHandler::containsKey)
+        .map(_intentToHandler::get)
+        .map(f -> f.apply(intent, session))
+        .orElseThrow(onError);
+  }
 
-      LOG.info("Slot value from number of games is {}", slot.getValue());
+  private SpeechletResponse handleEndIntent() {
+    return newTellResponse("Okay, ending.", "Ending score tracker");
+  }
 
-      int count = Integer.valueOf(slot.getValue());
-      return getCurrentScoreResponse(session, count);
-    } else if ("EndIntent".equals(intentName)) {
-      return newTellResponse("Okay, ending.", "Ending score tracker");
-    } else {
-      throw new SpeechletException("Invalid Intent");
-    }
+  private SpeechletResponse nextScoreIntent(Intent intent, Session session) {
+    Slot slot = intent.getSlot("NumberOfGames");
+
+    LOG.info("Slot value from number of games is {}", slot.getValue());
+
+    int count = Integer.valueOf(slot.getValue());
+    return getCurrentScoreResponse(session, count);
   }
 
   @Override

@@ -1,4 +1,4 @@
-package cricketskill.db;
+package cricketskill.io;
 
 import com.amazonaws.Protocol;
 import com.google.common.collect.Sets;

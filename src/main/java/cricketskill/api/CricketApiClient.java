@@ -1,11 +1,9 @@
 package cricketskill.api;
 
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import cricketskill.common.CallTimeTracker;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
@@ -23,6 +21,7 @@ import us.monoid.json.JSONObject;
 import us.monoid.web.JSONResource;
 import us.monoid.web.Resty;
 
+import static cricketskill.common.TrackerUtils.withTracking;
 import static java.util.Optional.empty;
 
 
@@ -39,22 +38,31 @@ public class CricketApiClient {
     _cacheFunction = cacheFunction;
   }
 
-  public GameDetailClientResult getDetails() {
+  public GameDetailClientResult getDetails(int start, int count) {
 
     List<Integer> gameIds = getGameIds();
 
     if (gameIds.isEmpty()) {
-      return new GameDetailClientResult(Maps.newHashMap(), Sets.newHashSet(), Sets.newHashSet());
+      return new GameDetailClientResult(0, Maps.newHashMap(), Sets.newHashSet());
     }
 
-    return getGameDetail(Sets.newHashSet(gameIds));
+    if (start >= gameIds.size()) {
+      return new GameDetailClientResult(0, Maps.newHashMap(), Sets.newHashSet());
+    }
+
+    int end = Math.min((start + count), gameIds.size());
+
+    LOG.info("Fetching games # {} to {}", start, end);
+
+    List<Integer> integers = gameIds.subList(start, end);
+    return getGameDetail(Sets.newHashSet(integers), gameIds.size());
   }
 
-  private GameDetailClientResult getGameDetail(Set<Integer> ids) {
-    return withTracking(() -> getGameDetailWithoutTracking(ids), "Get Game Detail " + ids);
+  private GameDetailClientResult getGameDetail(Set<Integer> ids, int total) {
+    return withTracking(() -> getGameDetailWithoutTracking(ids, total), "Get Game Detail " + ids, LOG);
   }
 
-  private GameDetailClientResult getGameDetailWithoutTracking(Set<Integer> ids) {
+  private GameDetailClientResult getGameDetailWithoutTracking(Set<Integer> ids, int total) {
 
     Map<Integer, GameDetail> cacheResult = Optional.ofNullable(_cacheFunction.apply(ids))
         .orElse(Maps.newHashMap());
@@ -76,7 +84,7 @@ public class CricketApiClient {
     result.putAll(cacheResult);
     result.putAll(uncachedResult);
 
-    return new GameDetailClientResult(result, processedIds, keysNotInCache);
+    return new GameDetailClientResult(total, result, keysNotInCache);
   }
 
   private Optional<GameDetail> fetchFromApi(int id) {
@@ -103,6 +111,7 @@ public class CricketApiClient {
     JSONObject match = matchOptional.get();
 
     String venue = safeJsonOp(() -> match.getString("ground_name")).get();
+    String shortVenue = safeJsonOp(() -> match.getString("ground_small_name")).get();
 
     String teamA = safeJsonOp(() -> match.getString("team1_name")).get();
     int teamAId = safeJsonOp(() -> match.getInt("team1_country_id")).get();
@@ -110,7 +119,8 @@ public class CricketApiClient {
     String teamB = safeJsonOp(() -> match.getString("team2_name")).get();
     int teamBId = safeJsonOp(() -> match.getInt("team2_country_id")).get();
 
-    int winner = safeJsonOp(() -> match.getInt("winner_team_id")).get();
+    int winner = safeJsonOp(() -> match.getInt("winner_team_id"))
+        .orElse(0);
 
     String liveStatus = safeJsonOp(() -> ((JSONObject) json.get("live")).getString("status")).get();
 
@@ -124,13 +134,14 @@ public class CricketApiClient {
         .setWinnerId(winner)
         .setStatus(status)
         .setLiveStatus(liveStatus)
+        .setShortVenue(shortVenue)
         .setVenue(venue);
 
     return Optional.of(build);
   }
 
   private List<Integer> getGameIds() {
-    return withTracking(this::getGameIdsWithoutTracking, "Get Game Ids");
+    return withTracking(this::getGameIdsWithoutTracking, "Get Game Ids", LOG);
   }
 
   private List<Integer> getGameIdsWithoutTracking() {
@@ -154,31 +165,16 @@ public class CricketApiClient {
         .map(Optional::get)
         .collect(Collectors.toList());
 
-    List<Integer> result = gameIds.subList(0, 5);
+    LOG.info("Returning ids: {}", gameIds);
 
-    LOG.info("Returning ids: {}", result);
-
-    return result;
-  }
-
-  private static <T> T withTracking(Supplier<T> supplier, String operationName) {
-    CallTimeTracker tracker = new CallTimeTracker(operationName).tic();
-
-    T result = supplier.get();
-
-    tracker.toc();
-
-    LOG.info(tracker.toString());
-
-    return result;
+    return gameIds;
   }
 
   private static <T> Optional<T> safeJsonOp(UnsafeJsonOp<T> op) {
     try {
       return Optional.of(op.perform());
     } catch (Exception e) {
-      e.printStackTrace();
-      //TODO: LOG
+      LOG.warn("Error parsing JSON {}", e.getMessage());
     }
 
     return empty();

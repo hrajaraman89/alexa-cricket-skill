@@ -8,10 +8,12 @@ public class GameDetail {
   private Team teamA;
   private Team teamB;
   private String venue;
+  private String shortVenue;
   private MatchStatus status;
   private String liveStatus;
   private int winnerId;
   private long lastUpdated;
+  private boolean isInternational;
 
   public GameDetail setId(int id) {
     this.id = id;
@@ -89,7 +91,26 @@ public class GameDetail {
     return lastUpdated;
   }
 
-  public void setLastUpdated(long lastUpdated) {
+  public GameDetail setLastUpdated(long lastUpdated) {
     this.lastUpdated = lastUpdated;
+    return this;
+  }
+
+  public String getShortVenue() {
+    return shortVenue;
+  }
+
+  public GameDetail setShortVenue(String shortVenue) {
+    this.shortVenue = shortVenue;
+    return this;
+  }
+
+  public boolean isInternational() {
+    return isInternational;
+  }
+
+  public GameDetail setInternational(boolean international) {
+    isInternational = international;
+    return this;
   }
 }

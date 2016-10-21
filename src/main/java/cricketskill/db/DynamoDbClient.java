@@ -42,7 +42,10 @@ public class DynamoDbClient {
 
     TableWriteItems batchWrite = new TableWriteItems(GAME_DETAIL);
 
+    long now = System.currentTimeMillis();
+
     gameDetails.stream()
+        .map(gd -> gd.setLastUpdated(now))
         .map(this::toItem)
         .forEach(batchWrite::addItemToPut);
 
@@ -59,8 +62,9 @@ public class DynamoDbClient {
         .with("liveStatus", gd.getLiveStatus())
         .with("status", gd.getStatus().toString())
         .with("winnerId", gd.getWinnerId())
-        .with("lastUpdated", System.currentTimeMillis())
+        .with("lastUpdated", gd.getLastUpdated())
         .with("venue", gd.getVenue())
+        .with("shortVenue", gd.getShortVenue())
         .withJSON("teamA", gd.getTeamA().toJson())
         .withJSON("teamB", gd.getTeamB().toJson());
   }

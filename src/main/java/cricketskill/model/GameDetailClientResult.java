@@ -6,22 +6,18 @@ import java.util.Set;
 
 
 public class GameDetailClientResult {
+  private final int _total;
   private final Map<Integer, GameDetail> _items;
-  private final Set<Integer> _keysFromCache;
   private final Set<Integer> _keysFromApi;
 
-  public GameDetailClientResult(Map<Integer, GameDetail> items, Set<Integer> keysFromCache, Set<Integer> keysFromApi) {
+  public GameDetailClientResult(int total, Map<Integer, GameDetail> items, Set<Integer> keysFromApi) {
+    _total = total;
     _items = items;
-    _keysFromCache = keysFromCache;
     _keysFromApi = keysFromApi;
   }
 
   public Map<Integer, GameDetail> getItems() {
     return _items;
-  }
-
-  public Set<Integer> getKeysFromCache() {
-    return _keysFromCache;
   }
 
   public Set<Integer> getKeysFromApi() {
@@ -33,5 +29,9 @@ public class GameDetailClientResult {
         .setPrettyPrinting()
         .create()
         .toJson(this);
+  }
+
+  public int getTotal() {
+    return _total;
   }
 }

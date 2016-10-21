@@ -15,12 +15,14 @@ import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
 import com.google.common.collect.Lists;
 import cricketskill.api.CricketApiClient;
+import cricketskill.common.TrackerUtils;
 import cricketskill.db.DynamoDbClient;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +30,12 @@ import org.slf4j.LoggerFactory;
 
 public class CricketSpeechlet implements Speechlet {
   private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
+  private static final long CACHE_TTL = 300000;
   private final CricketApiClient _client;
   private final DynamoDbClient _dbClient;
+
+  private static final int PAGE_LENGTH = 3;
+  static final String START_KEY = "start";
 
   public CricketSpeechlet() {
     this(Protocol.HTTP);
@@ -47,7 +53,7 @@ public class CricketSpeechlet implements Speechlet {
     LOG.info("Looking at GameDetails id {} status {} lastUpdated {} now {} diff {}", gd.getId(), gd.getStatus(),
         gd.getLastUpdated(), now, (now - gd.getLastUpdated()));
 
-    return gd.getStatus() == MatchStatus.COMPLETE || (now - gd.getLastUpdated()) <= 30000;
+    return gd.getStatus() == MatchStatus.COMPLETE || (now - gd.getLastUpdated()) <= CACHE_TTL;
   }
 
   @Override
@@ -76,7 +82,7 @@ public class CricketSpeechlet implements Speechlet {
     String intentName = (intent != null) ? intent.getName() : null;
 
     if ("CurrentScoreIntent".equals(intentName)) {
-      return getCurrentScoreResponse();
+      return getCurrentScoreResponse(session);
     } else if ("AMAZON.HelpIntent".equals(intentName)) {
       return getHelpResponse();
     } else if ("OscarIntent".equals(intentName)) {
@@ -101,20 +107,44 @@ public class CricketSpeechlet implements Speechlet {
     return newResponse(speechText, "Current Score");
   }
 
-  public SpeechletResponse getCurrentScoreResponse() {
+  public SpeechletResponse getCurrentScoreResponse(Session session) {
+    return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session), "Get current score", LOG);
+  }
+
+  private SpeechletResponse getCurrentScoreResponseInternal(Session session) {
 
     LOG.info("Getting current response");
 
-    long start = System.currentTimeMillis();
+    int start = Optional.ofNullable(session.getAttribute(START_KEY))
+        .map(Object::toString)
+        .map(Integer::valueOf)
+        .orElse(0);
 
-    GameDetailClientResult details = _client.getDetails();
+    LOG.info("Session's start is {}", start);
+
+    GameDetailClientResult details = _client.getDetails(start, PAGE_LENGTH);
+
     List<GameDetail> result = Lists.newArrayList(details.getItems().values());
 
-    StringBuilder sb = new StringBuilder(String.format("There are a total of %d games. ", result.size()));
+    session.setAttribute(START_KEY, (start + result.size()));
+
+    LOG.info("Session's new start is {}", session.getAttribute(START_KEY));
+
+    StringBuilder sb = new StringBuilder();
+
+    sb.append("Giving updates on ");
+
+    if (start == 0) {
+      sb.append(String.format("first %d matches. ", result.size()));
+    } else if (start + result.size() < details.getTotal()) {
+      sb.append(String.format("matches %d to %d. ", start + 1, (start + result.size())));
+    } else {
+      sb.append(String.format("last %d matches. ", result.size()));
+    }
 
     for (int i = 0; i < result.size(); i++) {
       sb.append(" ")
-          .append(i + 1)
+          .append(i + start + 1)
           .append(". ");
 
       appendDetailToStringBuilder(sb, result.get(i));
@@ -129,12 +159,6 @@ public class CricketSpeechlet implements Speechlet {
 
     _dbClient.updateGames(itemsToWrite);
 
-    long end = System.currentTimeMillis();
-
-    sb.append("\nApi response took ")
-        .append((end - start))
-        .append(" milliseconds.");
-
     String speechText = sb.toString();
 
     LOG.info("Speech text: {}", speechText);
@@ -148,7 +172,11 @@ public class CricketSpeechlet implements Speechlet {
     PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
     speech.setText(speechText);
 
-    return SpeechletResponse.newTellResponse(speech, card);
+    SpeechletResponse speechletResponse = SpeechletResponse.newTellResponse(speech, card);
+
+    speechletResponse.setShouldEndSession(false);
+
+    return speechletResponse;
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
@@ -156,7 +184,7 @@ public class CricketSpeechlet implements Speechlet {
         .append(String.format(" %s ", gd.getStatus() == MatchStatus.COMPLETE ? "played" : "is playing"))
         .append(gd.getTeamB().getName())
         .append(" at ")
-        .append(gd.getVenue())
+        .append(gd.getShortVenue())
         .append(". ")
         .append(gd.getLiveStatus())
         .append(". ");

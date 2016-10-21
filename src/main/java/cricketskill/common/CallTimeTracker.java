@@ -15,9 +15,12 @@ public class CallTimeTracker {
   }
 
   public CallTimeTracker toc() {
-
     end = System.currentTimeMillis();
     return this;
+  }
+
+  public long elapsed() {
+    return (end == 0 ? System.currentTimeMillis() : end) - start;
   }
 
   public String toString() {

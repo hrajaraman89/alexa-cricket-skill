@@ -13,7 +13,7 @@ public class CricketApiClientTest {
       throws Exception {
 
     GameDetailClientResult details = new CricketApiClient(i -> new DynamoDbClient(Protocol.HTTPS).getGames(i))
-        .getDetails();
+        .getDetails(0, 3);
 
     System.out.println(details);
   }

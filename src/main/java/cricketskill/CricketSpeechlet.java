@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 
 public class CricketSpeechlet implements Speechlet {
-  private static final Logger log = LoggerFactory.getLogger(CricketSpeechlet.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
   private final CricketApiClient _client;
   private final DynamoDbClient _dbClient;
 
@@ -44,7 +44,7 @@ public class CricketSpeechlet implements Speechlet {
 
   private static boolean isCachedItemValid(GameDetail gd) {
     long now = System.currentTimeMillis();
-    log.info("Looking at GameDetails id {} status {} lastUpdated {} now {} diff {}", gd.getId(), gd.getStatus(),
+    LOG.info("Looking at GameDetails id {} status {} lastUpdated {} now {} diff {}", gd.getId(), gd.getStatus(),
         gd.getLastUpdated(), now, (now - gd.getLastUpdated()));
 
     return gd.getStatus() == MatchStatus.COMPLETE || (now - gd.getLastUpdated()) <= 30000;
@@ -53,7 +53,7 @@ public class CricketSpeechlet implements Speechlet {
   @Override
   public void onSessionStarted(final SessionStartedRequest request, final Session session)
       throws SpeechletException {
-    log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(),
+    LOG.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(),
         session.getSessionId());
     // any initialization logic goes here
   }
@@ -61,7 +61,7 @@ public class CricketSpeechlet implements Speechlet {
   @Override
   public SpeechletResponse onLaunch(final LaunchRequest request, final Session session)
       throws SpeechletException {
-    log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(),
+    LOG.info("onLaunch requestId={}, sessionId={}", request.getRequestId(),
         session.getSessionId());
     return getWelcomeResponse();
   }
@@ -69,7 +69,7 @@ public class CricketSpeechlet implements Speechlet {
   @Override
   public SpeechletResponse onIntent(final IntentRequest request, final Session session)
       throws SpeechletException {
-    log.info("onIntent requestId={}, sessionId={}", request.getRequestId(),
+    LOG.info("onIntent requestId={}, sessionId={}", request.getRequestId(),
         session.getSessionId());
 
     Intent intent = request.getIntent();
@@ -89,7 +89,7 @@ public class CricketSpeechlet implements Speechlet {
   @Override
   public void onSessionEnded(final SessionEndedRequest request, final Session session)
       throws SpeechletException {
-    log.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(),
+    LOG.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(),
         session.getSessionId());
     // any cleanup logic goes here
   }
@@ -103,7 +103,7 @@ public class CricketSpeechlet implements Speechlet {
 
   public SpeechletResponse getCurrentScoreResponse() {
 
-    log.info("Getting current response");
+    LOG.info("Getting current response");
 
     long start = System.currentTimeMillis();
 
@@ -120,14 +120,14 @@ public class CricketSpeechlet implements Speechlet {
       appendDetailToStringBuilder(sb, result.get(i));
     }
 
-    details.getKeysFromApi().stream()
+    List<GameDetail> itemsToWrite = details.getKeysFromApi().stream()
         .filter(i -> details.getItems().containsKey(i))
         .map(i -> details.getItems().get(i))
-        .map(s -> {
-          log.info("{} is not cached. Writing to DB", s.getId());
-          return s;
-        })
-        .forEach(_dbClient::updateGame);
+        .collect(Collectors.toList());
+
+    LOG.info("Writing games with id {} to db", details.getKeysFromApi());
+
+    _dbClient.updateGames(itemsToWrite);
 
     long end = System.currentTimeMillis();
 
@@ -137,7 +137,7 @@ public class CricketSpeechlet implements Speechlet {
 
     String speechText = sb.toString();
 
-    log.info("Speech text: {}", speechText);
+    LOG.info("Speech text: {}", speechText);
 
     // Create the Simple card content.
     SimpleCard card = new SimpleCard();

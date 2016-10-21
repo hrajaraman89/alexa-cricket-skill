@@ -3,25 +3,28 @@ package cricketskill.db;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
-import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.TableKeysAndAttributes;
+import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import cricketskill.model.GameDetail;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class DynamoDbClient {
+  private static final Logger LOG = LoggerFactory.getLogger(DynamoDbClient.class);
 
   public static final String GAME_DETAIL = "CricketGameDetail";
-  private final Table _table;
   private final DynamoDB _dynamoDB;
 
   // use HTTPS if you are testing locally
@@ -29,14 +32,23 @@ public class DynamoDbClient {
     AmazonDynamoDBClient client = new AmazonDynamoDBClient(new ClientConfiguration().withProtocol(protocol));
 
     this._dynamoDB = new DynamoDB(client);
-    _table = _dynamoDB.getTable("CricketGameDetail");
   }
 
-  public boolean updateGame(GameDetail gd) {
-    Item item = toItem(gd);
+  public void updateGames(List<GameDetail> gameDetails) {
 
-    _table.putItem(item);
-    return true;
+    if (gameDetails.isEmpty()) {
+      return;
+    }
+
+    TableWriteItems batchWrite = new TableWriteItems(GAME_DETAIL);
+
+    gameDetails.stream()
+        .map(this::toItem)
+        .forEach(batchWrite::addItemToPut);
+
+    BatchWriteItemOutcome result = _dynamoDB.batchWriteItem(batchWrite);
+
+    LOG.info("Unprocessed items {} ", result.getUnprocessedItems());
   }
 
   private Item toItem(GameDetail gd) {

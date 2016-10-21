@@ -5,5 +5,16 @@ CurrentScoreIntent what team is playing
 CurrentScoreIntent what games are on
 CurrentScoreIntent give me an update on the games
 
+NextScoreIntent give me the next {NumberOfGames} scores
+NextScoreIntent give me scores for the next {NumberOfGames} games
+NextScoreIntent {NumberOfGames} games
+NextScoreIntent next {NumberOfGames} games
+NextScoreIntent next {NumberOfGames} scores
+NextScoreIntent next {NumberOfGames}
+
+EndIntent stop
+EndIntent end
+EndIntent no more scores
+
 OscarIntent which team is the best team
 OscarIntent which team is the best

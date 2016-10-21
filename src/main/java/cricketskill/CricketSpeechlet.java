@@ -1,6 +1,7 @@
 package cricketskill;
 
 import com.amazon.speech.slu.Intent;
+import com.amazon.speech.slu.Slot;
 import com.amazon.speech.speechlet.IntentRequest;
 import com.amazon.speech.speechlet.LaunchRequest;
 import com.amazon.speech.speechlet.Session;
@@ -86,7 +87,16 @@ public class CricketSpeechlet implements Speechlet {
     } else if ("AMAZON.HelpIntent".equals(intentName)) {
       return getHelpResponse();
     } else if ("OscarIntent".equals(intentName)) {
-      return newResponse("Oscar... is the best team, as long as they don't do work tomorrow.", "Oscar");
+      return newAskResponse("Oscar... is the best team, as long as they don't do work tomorrow.", "Oscar");
+    } else if ("NextScoreIntent".equals(intentName)) {
+      Slot slot = intent.getSlot("NumberOfGames");
+
+      LOG.info("Slot value from number of games is {}", slot.getValue());
+
+      int count = Integer.valueOf(slot.getValue());
+      return getCurrentScoreResponse(session, count);
+    } else if ("EndIntent".equals(intentName)) {
+      return newTellResponse("Okay, ending.", "Ending score tracker");
     } else {
       throw new SpeechletException("Invalid Intent");
     }
@@ -100,18 +110,16 @@ public class CricketSpeechlet implements Speechlet {
     // any cleanup logic goes here
   }
 
-  private SpeechletResponse getWelcomeResponse() {
-    String speechText = "Welcome to the Alexa Skills Kit, you can say what is the current score";
-
-    // Create the Simple card content.
-    return newResponse(speechText, "Current Score");
-  }
-
   public SpeechletResponse getCurrentScoreResponse(Session session) {
-    return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session), "Get current score", LOG);
+    return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, PAGE_LENGTH), "Get current score",
+        LOG);
   }
 
-  private SpeechletResponse getCurrentScoreResponseInternal(Session session) {
+  public SpeechletResponse getCurrentScoreResponse(Session session, int count) {
+    return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, count), "Get current score", LOG);
+  }
+
+  private SpeechletResponse getCurrentScoreResponseInternal(Session session, int count) {
 
     LOG.info("Getting current response");
 
@@ -122,7 +130,7 @@ public class CricketSpeechlet implements Speechlet {
 
     LOG.info("Session's start is {}", start);
 
-    GameDetailClientResult details = _client.getDetails(start, PAGE_LENGTH);
+    GameDetailClientResult details = _client.getDetails(start, count);
 
     List<GameDetail> result = Lists.newArrayList(details.getItems().values());
 
@@ -172,11 +180,14 @@ public class CricketSpeechlet implements Speechlet {
     PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
     speech.setText(speechText);
 
-    SpeechletResponse speechletResponse = SpeechletResponse.newTellResponse(speech, card);
+    PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
+    outputSpeech.setText(
+        "If you want more scores, you can say something like \"Give me the next 5 scores.\" To stop, say \"stop.\"");
 
-    speechletResponse.setShouldEndSession(false);
+    Reprompt reprompt = new Reprompt();
+    reprompt.setOutputSpeech(outputSpeech);
 
-    return speechletResponse;
+    return SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
@@ -190,6 +201,12 @@ public class CricketSpeechlet implements Speechlet {
         .append(". ");
   }
 
+  private SpeechletResponse getWelcomeResponse() {
+    String speechText =
+        "Welcome to Score Tracker, you can ask me what the score is by saying, \"what is the current score?\"";
+    return newAskResponse(speechText, "Current Score");
+  }
+
   /**
    * Creates a {@code SpeechletResponse} for the help intent.
    *
@@ -198,23 +215,32 @@ public class CricketSpeechlet implements Speechlet {
   private SpeechletResponse getHelpResponse() {
     String speechText = "You can say give me an update on the games to me!";
     String title = "Current Score - Help";
-    return newResponse(speechText, title);
+    return newAskResponse(speechText, title);
   }
 
-  private SpeechletResponse newResponse(String speechText, String title) {
+  private static SpeechletResponse newResponse(String text, String title, boolean isAsk) {
     // Create the Simple card content.
     SimpleCard card = new SimpleCard();
     card.setTitle(title);
-    card.setContent(speechText);
+    card.setContent(text);
 
     // Create the plain text output.
     PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
-    speech.setText(speechText);
+    speech.setText(text);
 
     // Create reprompt
     Reprompt reprompt = new Reprompt();
     reprompt.setOutputSpeech(speech);
 
-    return SpeechletResponse.newAskResponse(speech, reprompt, card);
+    return isAsk ? SpeechletResponse.newAskResponse(speech, reprompt, card)
+        : SpeechletResponse.newTellResponse(speech, card);
+  }
+
+  private static SpeechletResponse newAskResponse(String speechText, String title) {
+    return newResponse(speechText, title, true);
+  }
+
+  private static SpeechletResponse newTellResponse(String text, String title) {
+    return newResponse(text, title, false);
   }
 }

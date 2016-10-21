@@ -1,5 +1,7 @@
 package cricketskill.db;
 
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -15,13 +17,11 @@ public class DynamoDbClient {
   private final Table _table;
 
   public DynamoDbClient() {
-    AmazonDynamoDBClient client = new AmazonDynamoDBClient();
+    AmazonDynamoDBClient client = new AmazonDynamoDBClient(new ClientConfiguration().withProtocol(Protocol.HTTP));
 
     DynamoDB dynamoDB = new DynamoDB(client);
 
     _table = dynamoDB.getTable("CricketGameDetail");
-
-    System.out.println("Db client initiated");
   }
 
   public boolean updateGame(GameDetail gd) {

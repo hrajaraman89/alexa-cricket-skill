@@ -4,3 +4,6 @@ CurrentScoreIntent who is playing
 CurrentScoreIntent what team is playing
 CurrentScoreIntent what games are on
 CurrentScoreIntent give me an update on the games
+
+OscarIntent which team is the best team
+OscarIntent which team is the best

@@ -1,7 +1,9 @@
 package cricketskill.api;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import cricketskill.common.CallTimeTracker;
 import cricketskill.model.GameDetail;
 import cricketskill.model.MatchStatus;
 import cricketskill.model.Team;
@@ -9,7 +11,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import us.monoid.json.JSONArray;
 import us.monoid.json.JSONObject;
 import us.monoid.web.JSONResource;
@@ -19,6 +22,8 @@ import static java.util.Optional.empty;
 
 
 public class CricketApiClient {
+  private static final Logger LOG = LoggerFactory.getLogger(CricketApiClient.class);
+
   private static final String API_URL_TO_GET_IDS = "http://cricapi.com/api/cricket/";
   private static final String API_URL_TO_GET_MATCH_DETAIL_FORMAT =
       "http://www.espncricinfo.com/ci/engine/match/%d.json";
@@ -37,7 +42,7 @@ public class CricketApiClient {
       return Lists.newArrayList();
     }
 
-    return Stream.of(gameIds.get(0), gameIds.get(1))
+    return gameIds.stream()
         .map(this::getGameDetail)
         .filter(Optional::isPresent)
         .map(Optional::get)
@@ -45,12 +50,19 @@ public class CricketApiClient {
   }
 
   private Optional<GameDetail> getGameDetail(int id) {
+    return withTracking(() -> getGameDetailWithoutTracking(id), "Get Game Detail " + id);
+  }
+
+  private Optional<GameDetail> getGameDetailWithoutTracking(int id) {
 
     Optional<GameDetail> cacheResult = _cacheFunction.apply(id);
 
     if (cacheResult.isPresent()) {
+      cacheResult.get().setCachedResult(true);
       return cacheResult;
     }
+
+    LOG.info("{} not cached, fetching from API", id);
 
     String url = String.format(API_URL_TO_GET_MATCH_DETAIL_FORMAT, id);
 
@@ -100,6 +112,11 @@ public class CricketApiClient {
   }
 
   private List<Integer> getGameIds() {
+    return withTracking(this::getGameIdsWithoutTracking, "Get Game Ids");
+  }
+
+  private List<Integer> getGameIdsWithoutTracking() {
+
     UnsafeJsonOp<JSONArray> getArray = () -> (JSONArray) new Resty().json(API_URL_TO_GET_IDS).get("data");
 
     Optional<JSONArray> dataOptional = safeJsonOp(getArray);
@@ -119,10 +136,23 @@ public class CricketApiClient {
         .map(Optional::get)
         .collect(Collectors.toList());
 
-    gameIds.add(0, 1030217);
-    gameIds.add(1, 1004251);
+    List<Integer> result = gameIds.subList(0, 5);
 
-    return gameIds;
+    LOG.info("Returning ids: {}", result);
+
+    return result;
+  }
+
+  private static <T> T withTracking(Supplier<T> supplier, String operationName) {
+    CallTimeTracker tracker = new CallTimeTracker(operationName).tic();
+
+    T result = supplier.get();
+
+    tracker.toc();
+
+    LOG.info(tracker.toString());
+
+    return result;
   }
 
   private static <T> Optional<T> safeJsonOp(UnsafeJsonOp<T> op) {

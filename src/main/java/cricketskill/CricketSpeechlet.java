@@ -57,9 +57,11 @@ public class CricketSpeechlet implements Speechlet {
     String intentName = (intent != null) ? intent.getName() : null;
 
     if ("CurrentScoreIntent".equals(intentName)) {
-        return getCurrentScoreResponse();
+      return getCurrentScoreResponse();
     } else if ("AMAZON.HelpIntent".equals(intentName)) {
       return getHelpResponse();
+    } else if ("OscarIntent".equals(intentName)) {
+      return newResponse("Oscar... is the best team, as long as they don't do work tomorrow.", "Oscar");
     } else {
       throw new SpeechletException("Invalid Intent");
     }
@@ -88,7 +90,13 @@ public class CricketSpeechlet implements Speechlet {
 
     List<GameDetail> result = _client.getDetails();
 
-    result.forEach(_dbClient::updateGame);
+    result.stream()
+        .filter(g -> !g.isCachedResult())
+        .map(s -> {
+          log.info("{} is not cached. Writing to DB", s.getId());
+          return s;
+        })
+        .forEach(_dbClient::updateGame);
 
     StringBuilder sb = new StringBuilder(String.format("There are a total of %d games. ", result.size()));
 
@@ -102,11 +110,13 @@ public class CricketSpeechlet implements Speechlet {
 
     long end = System.currentTimeMillis();
 
-    sb.append("Api response took ")
+    sb.append("\nApi response took ")
         .append((end - start))
         .append(" milliseconds.");
 
     String speechText = sb.toString();
+
+    log.info("Speech text: {}", speechText);
 
     // Create the Simple card content.
     SimpleCard card = new SimpleCard();

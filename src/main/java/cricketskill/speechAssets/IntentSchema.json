@@ -4,6 +4,9 @@
       "intent": "CurrentScoreIntent"
     },
     {
+      "intent": "OscarIntent"
+    },
+    {
       "intent": "AMAZON.HelpIntent"
     }
   ]

@@ -6,13 +6,13 @@ import cricketskill.model.GameDetailClientResult;
 import org.junit.Test;
 
 
-public class CricketApiClientTest {
+public class GameDetailClientTest {
 
   @Test
   public void testGetDetails()
       throws Exception {
 
-    GameDetailClientResult details = new CricketApiClient(i -> new DynamoDbClient(Protocol.HTTPS).getGames(i))
+    GameDetailClientResult details = new GameDetailClient(i -> new DynamoDbClient(Protocol.HTTPS).getGames(i))
         .getDetails(0, 3);
 
     System.out.println(details);

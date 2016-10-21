@@ -1,7 +1,6 @@
 package cricketskill.api;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import cricketskill.model.GameDetail;
@@ -13,34 +12,33 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import us.monoid.json.JSONArray;
 import us.monoid.json.JSONObject;
 import us.monoid.web.JSONResource;
 import us.monoid.web.Resty;
 
+import static cricketskill.common.OptionalUtils.isEmpty;
 import static cricketskill.common.TrackerUtils.withTracking;
+import static cricketskill.common.UnsafeJsonOp.safeJsonOp;
 import static java.util.Optional.empty;
 
 
-public class CricketApiClient {
-  private static final Logger LOG = LoggerFactory.getLogger(CricketApiClient.class);
+public class GameDetailClient {
+  private static final Logger LOG = LoggerFactory.getLogger(GameDetailClient.class);
 
-  private static final String API_URL_TO_GET_IDS = "http://cricapi.com/api/cricket/";
   private static final String API_URL_TO_GET_MATCH_DETAIL_FORMAT =
       "http://www.espncricinfo.com/ci/engine/match/%d.json";
 
   private final Function<Set<Integer>, Map<Integer, GameDetail>> _cacheFunction;
 
-  public CricketApiClient(Function<Set<Integer>, Map<Integer, GameDetail>> cacheFunction) {
+  public GameDetailClient(Function<Set<Integer>, Map<Integer, GameDetail>> cacheFunction) {
     _cacheFunction = cacheFunction;
   }
 
   public GameDetailClientResult getDetails(int start, int count) {
 
-    List<Integer> gameIds = getGameIds();
+    List<Integer> gameIds = new GameIdsFinderClient().getGameIds();
 
     if (gameIds.isEmpty()) {
       return new GameDetailClientResult(0, Maps.newHashMap(), Sets.newHashSet());
@@ -138,55 +136,5 @@ public class CricketApiClient {
         .setVenue(venue);
 
     return Optional.of(build);
-  }
-
-  private List<Integer> getGameIds() {
-    return withTracking(this::getGameIdsWithoutTracking, "Get Game Ids", LOG);
-  }
-
-  private List<Integer> getGameIdsWithoutTracking() {
-
-    UnsafeJsonOp<JSONArray> getArray = () -> (JSONArray) new Resty().json(API_URL_TO_GET_IDS).get("data");
-
-    Optional<JSONArray> dataOptional = safeJsonOp(getArray);
-
-    if (isEmpty(dataOptional)) {
-      return Lists.newArrayList();
-    }
-
-    JSONArray data = dataOptional.get();
-
-    List<Integer> gameIds = IntStream.range(0, data.length()).boxed()
-        .map(d -> safeJsonOp(() -> data.getJSONObject(d)))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .map(dataItem -> safeJsonOp(() -> dataItem.getInt("unique_id")))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
-
-    LOG.info("Returning ids: {}", gameIds);
-
-    return gameIds;
-  }
-
-  private static <T> Optional<T> safeJsonOp(UnsafeJsonOp<T> op) {
-    try {
-      return Optional.of(op.perform());
-    } catch (Exception e) {
-      LOG.warn("Error parsing JSON {}", e.getMessage());
-    }
-
-    return empty();
-  }
-
-  @FunctionalInterface
-  private interface UnsafeJsonOp<T> {
-    T perform()
-        throws Exception;
-  }
-
-  private static <T> boolean isEmpty(Optional<T> optional) {
-    return !optional.isPresent();
   }
 }

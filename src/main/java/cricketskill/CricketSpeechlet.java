@@ -16,7 +16,7 @@ import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import cricketskill.api.CricketApiClient;
+import cricketskill.api.GameDetailClient;
 import cricketskill.common.TrackerUtils;
 import cricketskill.io.DynamoDbClient;
 import cricketskill.model.GameDetail;
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class CricketSpeechlet implements Speechlet {
   private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
   private static final long CACHE_TTL = 300000;
-  private final CricketApiClient _client;
+  private final GameDetailClient _client;
   private final DynamoDbClient _dbClient;
 
   private static final int PAGE_LENGTH = 3;
@@ -58,7 +58,7 @@ public class CricketSpeechlet implements Speechlet {
 
   public CricketSpeechlet(Protocol protocol) {
     _dbClient = new DynamoDbClient(protocol);
-    _client = new CricketApiClient(i -> _dbClient.getGames(i).entrySet().stream()
+    _client = new GameDetailClient(i -> _dbClient.getGames(i).entrySet().stream()
         .filter(es -> isCachedItemValid(es.getValue()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
   }

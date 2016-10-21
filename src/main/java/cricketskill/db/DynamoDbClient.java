@@ -16,8 +16,9 @@ public class DynamoDbClient {
 
   private final Table _table;
 
-  public DynamoDbClient() {
-    AmazonDynamoDBClient client = new AmazonDynamoDBClient(new ClientConfiguration().withProtocol(Protocol.HTTP));
+  // use HTTPS if you are testing locally
+  public DynamoDbClient(Protocol protocol) {
+    AmazonDynamoDBClient client = new AmazonDynamoDBClient(new ClientConfiguration().withProtocol(protocol));
 
     DynamoDB dynamoDB = new DynamoDB(client);
 
@@ -39,6 +40,7 @@ public class DynamoDbClient {
         .with("liveStatus", gd.getLiveStatus())
         .with("status", gd.getStatus().toString())
         .with("winnerId", gd.getWinnerId())
+        .with("lastUpdated", System.currentTimeMillis())
         .with("venue", gd.getVenue())
         .withJSON("teamA", gd.getTeamA().toJson())
         .withJSON("teamB", gd.getTeamB().toJson());

@@ -12,6 +12,7 @@ public class GameDetail {
   private String liveStatus;
   private int winnerId;
   private boolean isCachedResult;
+  private long lastUpdated;
 
   public GameDetail setId(int id) {
     this.id = id;
@@ -65,8 +66,9 @@ public class GameDetail {
 
   public MatchStatus getStatus() {
 
-    if (getStatus() == MatchStatus.CURRENT && winnerId != 0) {
+    if (status == MatchStatus.CURRENT && winnerId != 0) {
       setStatus(MatchStatus.COMPLETE);
+      setCachedResult(false);
     }
 
     return status;
@@ -92,5 +94,9 @@ public class GameDetail {
   public GameDetail setCachedResult(boolean cachedResult) {
     isCachedResult = cachedResult;
     return this;
+  }
+
+  public long getLastUpdated() {
+    return lastUpdated;
   }
 }

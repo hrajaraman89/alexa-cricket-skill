@@ -12,6 +12,7 @@ import com.amazon.speech.speechlet.SpeechletResponse;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
+import com.amazonaws.Protocol;
 import cricketskill.api.CricketApiClient;
 import cricketskill.db.DynamoDbClient;
 import cricketskill.model.GameDetail;
@@ -27,8 +28,21 @@ public class CricketSpeechlet implements Speechlet {
   private final DynamoDbClient _dbClient;
 
   public CricketSpeechlet() {
-    _dbClient = new DynamoDbClient();
-    _client = new CricketApiClient(_dbClient::getGame);
+    this(Protocol.HTTP);
+  }
+
+  public CricketSpeechlet(Protocol protocol) {
+    _dbClient = new DynamoDbClient(protocol);
+    _client = new CricketApiClient(i -> _dbClient.getGame(i)
+        .filter(CricketSpeechlet::isCachedItemValid));
+  }
+
+  private static boolean isCachedItemValid(GameDetail gd) {
+    long now = System.currentTimeMillis();
+    log.info("Looking at GameDetails id {} status {} lastUpdated {} now {}", gd.getId(), gd.getStatus(),
+        gd.getLastUpdated(), now);
+
+    return gd.getStatus() == MatchStatus.COMPLETE || (now - gd.getLastUpdated()) <= 30000;
   }
 
   @Override

@@ -3,12 +3,17 @@ package cricketskill.api;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import cricketskill.common.CallTimeTracker;
 import cricketskill.model.GameDetail;
+import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
 import cricketskill.model.Team;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
@@ -28,40 +33,53 @@ public class CricketApiClient {
   private static final String API_URL_TO_GET_MATCH_DETAIL_FORMAT =
       "http://www.espncricinfo.com/ci/engine/match/%d.json";
 
-  private final Function<Integer, Optional<GameDetail>> _cacheFunction;
+  private final Function<Set<Integer>, Map<Integer, GameDetail>> _cacheFunction;
 
-  public CricketApiClient(Function<Integer, Optional<GameDetail>> cacheFunction) {
+  public CricketApiClient(Function<Set<Integer>, Map<Integer, GameDetail>> cacheFunction) {
     _cacheFunction = cacheFunction;
   }
 
-  public List<GameDetail> getDetails() {
+  public GameDetailClientResult getDetails() {
 
     List<Integer> gameIds = getGameIds();
 
     if (gameIds.isEmpty()) {
-      return Lists.newArrayList();
+      return new GameDetailClientResult(Maps.newHashMap(), Sets.newHashSet(), Sets.newHashSet());
     }
 
-    return gameIds.stream()
-        .map(this::getGameDetail)
+    return getGameDetail(Sets.newHashSet(gameIds));
+  }
+
+  private GameDetailClientResult getGameDetail(Set<Integer> ids) {
+    return withTracking(() -> getGameDetailWithoutTracking(ids), "Get Game Detail " + ids);
+  }
+
+  private GameDetailClientResult getGameDetailWithoutTracking(Set<Integer> ids) {
+
+    Map<Integer, GameDetail> cacheResult = Optional.ofNullable(_cacheFunction.apply(ids))
+        .orElse(Maps.newHashMap());
+
+    Set<Integer> processedIds = cacheResult.keySet();
+
+    Sets.SetView<Integer> keysNotInCache = Sets.difference(ids, processedIds);
+
+    LOG.info("Following keys not in cache: {}", keysNotInCache);
+
+    Map<Integer, GameDetail> uncachedResult = keysNotInCache.stream()
+        .map(this::fetchFromApi)
         .filter(Optional::isPresent)
         .map(Optional::get)
-        .collect(Collectors.toList());
+        .collect(Collectors.toMap(GameDetail::getId, gd -> gd));
+
+    Map<Integer, GameDetail> result = Maps.newHashMap();
+
+    result.putAll(cacheResult);
+    result.putAll(uncachedResult);
+
+    return new GameDetailClientResult(result, processedIds, keysNotInCache);
   }
 
-  private Optional<GameDetail> getGameDetail(int id) {
-    return withTracking(() -> getGameDetailWithoutTracking(id), "Get Game Detail " + id);
-  }
-
-  private Optional<GameDetail> getGameDetailWithoutTracking(int id) {
-
-    Optional<GameDetail> cacheResult = _cacheFunction.apply(id);
-
-    if (cacheResult.isPresent()) {
-      cacheResult.get().setCachedResult(true);
-      return cacheResult;
-    }
-
+  private Optional<GameDetail> fetchFromApi(int id) {
     LOG.info("{} not cached, fetching from API", id);
 
     String url = String.format(API_URL_TO_GET_MATCH_DETAIL_FORMAT, id);

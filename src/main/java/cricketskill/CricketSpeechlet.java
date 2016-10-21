@@ -13,11 +13,15 @@ import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
+import com.google.common.collect.Lists;
 import cricketskill.api.CricketApiClient;
 import cricketskill.db.DynamoDbClient;
 import cricketskill.model.GameDetail;
+import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,14 +37,15 @@ public class CricketSpeechlet implements Speechlet {
 
   public CricketSpeechlet(Protocol protocol) {
     _dbClient = new DynamoDbClient(protocol);
-    _client = new CricketApiClient(i -> _dbClient.getGame(i)
-        .filter(CricketSpeechlet::isCachedItemValid));
+    _client = new CricketApiClient(i -> _dbClient.getGames(i).entrySet().stream()
+        .filter(es -> isCachedItemValid(es.getValue()))
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
   }
 
   private static boolean isCachedItemValid(GameDetail gd) {
     long now = System.currentTimeMillis();
-    log.info("Looking at GameDetails id {} status {} lastUpdated {} now {}", gd.getId(), gd.getStatus(),
-        gd.getLastUpdated(), now);
+    log.info("Looking at GameDetails id {} status {} lastUpdated {} now {} diff {}", gd.getId(), gd.getStatus(),
+        gd.getLastUpdated(), now, (now - gd.getLastUpdated()));
 
     return gd.getStatus() == MatchStatus.COMPLETE || (now - gd.getLastUpdated()) <= 30000;
   }
@@ -102,7 +107,8 @@ public class CricketSpeechlet implements Speechlet {
 
     long start = System.currentTimeMillis();
 
-    List<GameDetail> result = _client.getDetails();
+    GameDetailClientResult details = _client.getDetails();
+    List<GameDetail> result = Lists.newArrayList(details.getItems().values());
 
     StringBuilder sb = new StringBuilder(String.format("There are a total of %d games. ", result.size()));
 
@@ -114,8 +120,9 @@ public class CricketSpeechlet implements Speechlet {
       appendDetailToStringBuilder(sb, result.get(i));
     }
 
-    result.stream()
-        .filter(g -> !g.isCachedResult())
+    details.getKeysFromApi().stream()
+        .filter(i -> details.getItems().containsKey(i))
+        .map(i -> details.getItems().get(i))
         .map(s -> {
           log.info("{} is not cached. Writing to DB", s.getId());
           return s;

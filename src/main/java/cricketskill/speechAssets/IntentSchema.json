@@ -1,0 +1,25 @@
+{
+  "intents": [
+    {
+      "intent": "CurrentScoreIntent"
+    },
+    {
+      "intent": "NextScoreIntent",
+      "slots": [
+        {
+          "name": "NumberOfGames",
+          "type": "AMAZON.NUMBER"
+        }
+      ]
+    },
+    {
+      "intent": "EndIntent"
+    },
+    {
+      "intent": "OscarIntent"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    }
+  ]
+}

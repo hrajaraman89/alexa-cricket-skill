@@ -3,11 +3,12 @@ package cricketskill.model;
 import com.google.gson.Gson;
 
 
-@SuppressWarnings({"unused", "checkstyle"})
 public class GameDetail {
   private int id;
-  private Team teamA;
-  private Team teamB;
+  private int teamAId;
+  private String teamAName;
+  private int teamBId;
+  private String teamBName;
   private String venue;
   private String shortVenue;
   private MatchStatus status;
@@ -17,14 +18,6 @@ public class GameDetail {
 
   public int getId() {
     return id;
-  }
-
-  public Team getTeamA() {
-    return teamA;
-  }
-
-  public Team getTeamB() {
-    return teamB;
   }
 
   public String getVenue() {
@@ -63,5 +56,21 @@ public class GameDetail {
 
   public String getShortVenue() {
     return shortVenue;
+  }
+
+  public int getTeamBId() {
+    return teamBId;
+  }
+
+  public String getTeamBName() {
+    return teamBName;
+  }
+
+  public int getTeamAId() {
+    return teamAId;
+  }
+
+  public String getTeamAName() {
+    return teamAName;
   }
 }

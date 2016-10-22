@@ -85,12 +85,6 @@
     </dependency>
 
     <dependency>
-      <groupId>us.monoid.web</groupId>
-      <artifactId>resty</artifactId>
-      <version>0.3.2</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.json4s</groupId>
       <artifactId>json4s-native_2.11</artifactId>
       <version>3.4.1</version>

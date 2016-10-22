@@ -13,7 +13,7 @@ public class CricketSpeechletTest {
     Session session = Session.builder()
         .withSessionId("session")
         .build();
-    session.setAttribute(CricketSpeechlet.START_KEY, 21);
+    session.setAttribute(CricketSpeechlet.START_KEY, 0);
 
     SpeechletResponse result = new CricketSpeechlet(Protocol.HTTPS).getCurrentScoreResponse(session);
 

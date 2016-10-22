@@ -23,9 +23,11 @@ def update_cricket_ids(cricket_summary)
     }
   }
 
+  ids_as_string = cricket_ids.uniq
+
   item = {
       'id' => 'intl',
-      'gameIds' => cricket_ids.uniq,
+      'gameIds' => ids_as_string.map(&:to_i),
       'lastUpdated' => Time.now.utc.to_i
   }
 
@@ -36,7 +38,7 @@ def update_cricket_ids(cricket_summary)
 
   DB_CLIENT.put_item(ids)
 
-  item
+  ids_as_string
 end
 
 def update_cricket_database()
@@ -48,7 +50,7 @@ def update_cricket_database()
 
   cricket_matches = cricket_summary['matches']
 
-  ids['gameIds'].each { |i|
+  ids.each { |i|
     match = cricket_matches[i]
 
     url = match['url']

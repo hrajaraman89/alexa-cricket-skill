@@ -17,7 +17,6 @@ import com.amazonaws.Protocol;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import cricketskill.api.GameDetailClient;
-import cricketskill.api.GameIdsFinderClient;
 import cricketskill.common.TrackerUtils;
 import cricketskill.io.DynamoDbClient;
 import cricketskill.model.GameDetail;
@@ -138,6 +137,10 @@ public class CricketSpeechlet implements Speechlet {
 
     List<GameDetail> result = Lists.newArrayList(details.getItems().values());
 
+    if (result.isEmpty()) {
+      return newTellResponse("There are no more current games", "Score Tracker");
+    }
+
     session.setAttribute(START_KEY, (start + result.size()));
 
     LOG.info("Session's new start is {}", session.getAttribute(START_KEY));
@@ -186,9 +189,9 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
-    sb.append(gd.getTeamA().getName())
+    sb.append(gd.getTeamAName())
         .append(String.format(" %s ", gd.getStatus() == MatchStatus.COMPLETE ? "played" : "is playing"))
-        .append(gd.getTeamB().getName())
+        .append(gd.getTeamBName())
         .append(" at ")
         .append(gd.getShortVenue())
         .append(". ")

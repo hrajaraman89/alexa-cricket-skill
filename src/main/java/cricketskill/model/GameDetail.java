@@ -2,6 +2,7 @@ package cricketskill.model;
 
 import com.google.gson.Gson;
 
+
 @SuppressWarnings({"unused", "checkstyle"})
 public class GameDetail {
   private int id;
@@ -13,7 +14,6 @@ public class GameDetail {
   private String liveStatus;
   private int winnerId;
   private long lastUpdated;
-  private boolean isInternational;
 
   public int getId() {
     return id;
@@ -63,9 +63,5 @@ public class GameDetail {
 
   public String getShortVenue() {
     return shortVenue;
-  }
-
-  public boolean isInternational() {
-    return isInternational;
   }
 }

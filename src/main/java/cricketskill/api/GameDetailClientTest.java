@@ -11,8 +11,8 @@ public class GameDetailClientTest {
   @Test
   public void testGetDetails()
       throws Exception {
-
-    GameDetailClientResult details = new GameDetailClient(i -> new DynamoDbClient(Protocol.HTTPS).getGames(i))
+    DynamoDbClient dynamoDbClient = new DynamoDbClient(Protocol.HTTPS);
+    GameDetailClientResult details = new GameDetailClient(dynamoDbClient)
         .getDetails(0, 3);
 
     System.out.println(details);

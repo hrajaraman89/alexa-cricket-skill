@@ -17,6 +17,7 @@ import com.amazonaws.Protocol;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import cricketskill.api.GameDetailClient;
+import cricketskill.api.GameIdsFinderClient;
 import cricketskill.common.TrackerUtils;
 import cricketskill.io.DynamoDbClient;
 import cricketskill.model.GameDetail;
@@ -55,7 +56,7 @@ public class CricketSpeechlet implements Speechlet {
 
   public CricketSpeechlet(Protocol protocol) {
     DynamoDbClient dbClient = new DynamoDbClient(protocol);
-    _client = new GameDetailClient(dbClient::getGames);
+    _client = new GameDetailClient(dbClient);
   }
 
   @Override

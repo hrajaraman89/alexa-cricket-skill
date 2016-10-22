@@ -1,8 +1,8 @@
 package cricketskill.api;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import cricketskill.io.DynamoDbClient;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import java.util.List;
@@ -18,15 +18,15 @@ import static cricketskill.common.TrackerUtils.withTracking;
 public class GameDetailClient {
   private static final Logger LOG = LoggerFactory.getLogger(GameDetailClient.class);
 
-  private final Function<Set<Integer>, Map<Integer, GameDetail>> _cacheFunction;
+  private final DynamoDbClient _dynamoDbClient;
 
-  public GameDetailClient(Function<Set<Integer>, Map<Integer, GameDetail>> cacheFunction) {
-    _cacheFunction = cacheFunction;
+  public GameDetailClient(DynamoDbClient client) {
+    this._dynamoDbClient = client;
   }
 
   public GameDetailClientResult getDetails(int start, int count) {
 
-    List<Integer> gameIds = new GameIdsFinderClient().getGameIds();
+    List<Integer> gameIds = withTracking(_dynamoDbClient::getGameIds, "Get Game Ids", LOG);
 
     if (gameIds.isEmpty()) {
       return new GameDetailClientResult(0, Maps.newHashMap());
@@ -50,7 +50,7 @@ public class GameDetailClient {
 
   private GameDetailClientResult getGameDetailWithoutTracking(Set<Integer> ids, int total) {
 
-    Map<Integer, GameDetail> result = Optional.ofNullable(_cacheFunction.apply(ids))
+    Map<Integer, GameDetail> result = Optional.ofNullable(_dynamoDbClient.getGames(ids))
         .orElse(Maps.newHashMap());
 
     return new GameDetailClientResult(total, result);

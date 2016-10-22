@@ -7,15 +7,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.monoid.json.JSONArray;
 import us.monoid.json.JSONObject;
+import us.monoid.web.JSONResource;
 import us.monoid.web.Resty;
 
-import static cricketskill.common.OptionalUtils.isEmpty;
 import static cricketskill.common.TrackerUtils.withTracking;
 import static cricketskill.common.UnsafeJsonOp.safeJsonOp;
 
@@ -25,7 +26,6 @@ import static cricketskill.common.UnsafeJsonOp.safeJsonOp;
  */
 public class GameIdsFinderClient {
   private static final Logger LOG = LoggerFactory.getLogger(GameIdsFinderClient.class);
-  private static final String API_URL_TO_GET_IDS = "http://cricapi.com/api/cricket/";
   private static final String API_URL_TO_GET_IDS_2 = "http://www.espncricinfo.com/netstorage/summary.json";
 
   public List<Integer> getGameIds() {
@@ -33,16 +33,52 @@ public class GameIdsFinderClient {
   }
 
   private List<Integer> getGameIdsInternal() {
-    UnsafeJsonOp<JSONObject> getModules = () -> (JSONObject) new Resty().json(API_URL_TO_GET_IDS_2).get("modules");
+    Optional<JSONResource> json = safeJsonOp(() -> new Resty().json(API_URL_TO_GET_IDS_2));
 
-    Optional<JSONObject> modulesOptional = safeJsonOp(getModules);
+    List<Integer> internalGameIds = json.map(getJSONForKey("modules"))
+        .flatMap(UnsafeJsonOp::safeJsonOp)
+        .map(GameIdsFinderClient::getInternalGameIds)
+        .orElse(Lists.newArrayList());
 
-    if (isEmpty(modulesOptional)) {
+    if (internalGameIds.isEmpty()) {
       return Lists.newArrayList();
     }
 
-    JSONObject modules = modulesOptional.get();
+    return toExternalGameIds(json.get(), internalGameIds);
+  }
 
+  private static List<Integer> toExternalGameIds(JSONResource json, List<Integer> internalGameIds) {
+    return safeJsonOp(getJSONForKey("matches").apply(json))
+        .map(matches -> toExternalGameIds(matches, internalGameIds))
+        .orElse(Lists.newArrayList());
+  }
+
+  private static List<Integer> toExternalGameIds(JSONObject matches, List<Integer> internalGameIds) {
+    return internalGameIds.stream()
+        .map(String::valueOf)
+        .map(matches::optJSONObject)
+        .filter(match -> match != null)
+        .map(match -> match.optString("url"))
+        .filter(url -> url != null)
+        .map(GameIdsFinderClient::toExternalId)
+        .collect(Collectors.toList());
+  }
+
+  //url: "/sunfoil-series-2016-17/engine/match/1003571.html"
+  private static Integer toExternalId(String url) {
+    int lastSlash = url.lastIndexOf('/');
+    int lastPeriod = url.lastIndexOf('.');
+
+    String idAsString = url.substring(lastSlash + 1, lastPeriod);
+
+    return Integer.valueOf(idAsString);
+  }
+
+  private static Function<JSONResource, UnsafeJsonOp<JSONObject>> getJSONForKey(String key) {
+    return j -> () -> (JSONObject) j.get(key);
+  }
+
+  private static List<Integer> getInternalGameIds(JSONObject modules) {
     Iterator<String> keys = modules.keys();
 
     Set<Integer> ids = Sets.newHashSet();
@@ -77,31 +113,5 @@ public class GameIdsFinderClient {
     }
 
     return Lists.newArrayList(ids);
-  }
-
-  private List<Integer> getGameIdsWithoutTracking() {
-
-    UnsafeJsonOp<JSONArray> getArray = () -> (JSONArray) new Resty().json(API_URL_TO_GET_IDS).get("data");
-
-    Optional<JSONArray> dataOptional = safeJsonOp(getArray);
-
-    if (isEmpty(dataOptional)) {
-      return Lists.newArrayList();
-    }
-
-    JSONArray data = dataOptional.get();
-
-    List<Integer> gameIds = IntStream.range(0, data.length()).boxed()
-        .map(d -> safeJsonOp(() -> data.getJSONObject(d)))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .map(dataItem -> safeJsonOp(() -> dataItem.getInt("unique_id")))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
-
-    LOG.info("Returning ids: {}", gameIds);
-
-    return gameIds;
   }
 }

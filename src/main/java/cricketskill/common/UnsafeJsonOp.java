@@ -9,7 +9,7 @@ import static java.util.Optional.empty;
 
 @FunctionalInterface
 public interface UnsafeJsonOp<T> {
-  static final Logger LOG = LoggerFactory.getLogger(UnsafeJsonOp.class);
+  Logger LOG = LoggerFactory.getLogger(UnsafeJsonOp.class);
 
   T perform()
       throws Exception;

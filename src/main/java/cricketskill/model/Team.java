@@ -2,7 +2,7 @@ package cricketskill.model;
 
 import com.google.gson.Gson;
 
-
+@SuppressWarnings({"unused", "checkstyle"})
 public class Team {
   private final String name;
   private final int id;

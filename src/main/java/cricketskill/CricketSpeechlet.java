@@ -27,16 +27,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 public class CricketSpeechlet implements Speechlet {
   private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
-  private static final long CACHE_TTL = 300000;
   private final GameDetailClient _client;
-  private final DynamoDbClient _dbClient;
 
   private static final int PAGE_LENGTH = 3;
   static final String START_KEY = "start";
@@ -57,18 +54,8 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   public CricketSpeechlet(Protocol protocol) {
-    _dbClient = new DynamoDbClient(protocol);
-    _client = new GameDetailClient(i -> _dbClient.getGames(i).entrySet().stream()
-        .filter(es -> isCachedItemValid(es.getValue()))
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
-  }
-
-  private static boolean isCachedItemValid(GameDetail gd) {
-    long now = System.currentTimeMillis();
-    LOG.info("Looking at GameDetails id {} status {} lastUpdated {} now {} diff {}", gd.getId(), gd.getStatus(),
-        gd.getLastUpdated(), now, (now - gd.getLastUpdated()));
-
-    return gd.getStatus() == MatchStatus.COMPLETE || (now - gd.getLastUpdated()) <= CACHE_TTL;
+    DynamoDbClient dbClient = new DynamoDbClient(protocol);
+    _client = new GameDetailClient(dbClient::getGames);
   }
 
   @Override
@@ -131,7 +118,7 @@ public class CricketSpeechlet implements Speechlet {
         LOG);
   }
 
-  public SpeechletResponse getCurrentScoreResponse(Session session, int count) {
+  private SpeechletResponse getCurrentScoreResponse(Session session, int count) {
     return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, count), "Get current score", LOG);
   }
 
@@ -173,15 +160,6 @@ public class CricketSpeechlet implements Speechlet {
 
       appendDetailToStringBuilder(sb, result.get(i));
     }
-
-    List<GameDetail> itemsToWrite = details.getKeysFromApi().stream()
-        .filter(i -> details.getItems().containsKey(i))
-        .map(i -> details.getItems().get(i))
-        .collect(Collectors.toList());
-
-    LOG.info("Writing games with id {} to db", details.getKeysFromApi());
-
-    _dbClient.updateGames(itemsToWrite);
 
     String speechText = sb.toString();
 

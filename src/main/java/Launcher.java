@@ -26,6 +26,7 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 /**
  * Shared launcher for executing all sample skills within a single servlet container.
  */
+@SuppressWarnings("WeakerAccess")
 public final class Launcher {
     /**
      * port number for the jetty server.

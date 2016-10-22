@@ -12,8 +12,9 @@ import com.amazon.speech.speechlet.lambda.SpeechletRequestStreamHandler;
  * this project using the {@code lambda-compile} Ant task and upload the resulting zip file to power
  * your function.
  */
+@SuppressWarnings({"WeakerAccess", "unused"})
 public final class CricketSpeechletRequestStreamHandler extends SpeechletRequestStreamHandler {
-    private static final Set<String> supportedApplicationIds = new HashSet<String>();
+    private static final Set<String> supportedApplicationIds = new HashSet<>();
     static {
         /*
          * This Id can be found on https://developer.amazon.com/edw/home.html#/ "Edit" the relevant

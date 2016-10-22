@@ -11,7 +11,7 @@ public class CricketSpeechletTest {
   @Test
   public void test2() {
     Session session = Session.builder()
-        .withSessionId("abcd")
+        .withSessionId("session")
         .build();
     session.setAttribute(CricketSpeechlet.START_KEY, 21);
 

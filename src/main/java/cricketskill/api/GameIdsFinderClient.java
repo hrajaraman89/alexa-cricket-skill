@@ -22,9 +22,9 @@ import static cricketskill.common.UnsafeJsonOp.safeJsonOp;
 
 
 /**
- * Finds internation game ids that are currently ongoing
+ * Finds international game ids that are currently ongoing
  */
-public class GameIdsFinderClient {
+class GameIdsFinderClient {
   private static final Logger LOG = LoggerFactory.getLogger(GameIdsFinderClient.class);
   private static final String API_URL_TO_GET_IDS_2 = "http://www.espncricinfo.com/netstorage/summary.json";
 

@@ -3,17 +3,14 @@ package cricketskill.io;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.TableKeysAndAttributes;
-import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import cricketskill.model.GameDetail;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,9 +19,10 @@ import org.slf4j.LoggerFactory;
 
 
 public class DynamoDbClient {
+  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(DynamoDbClient.class);
 
-  public static final String GAME_DETAIL = "CricketGameDetail";
+  private static final String GAME_DETAIL = "CricketGameDetail";
   private final DynamoDB _dynamoDB;
 
   // use HTTPS if you are testing locally
@@ -34,47 +32,8 @@ public class DynamoDbClient {
     this._dynamoDB = new DynamoDB(client);
   }
 
-  public void updateGames(List<GameDetail> gameDetails) {
-
-    if (gameDetails.isEmpty()) {
-      return;
-    }
-
-    TableWriteItems batchWrite = new TableWriteItems(GAME_DETAIL);
-
-    long now = System.currentTimeMillis();
-
-    gameDetails.stream()
-        .map(gd -> gd.setLastUpdated(now))
-        .map(this::toItem)
-        .forEach(batchWrite::addItemToPut);
-
-    BatchWriteItemOutcome result = _dynamoDB.batchWriteItem(batchWrite);
-
-    LOG.info("Unprocessed items {} ", result.getUnprocessedItems());
-  }
-
-  private Item toItem(GameDetail gd) {
-
-    int id = gd.getId();
-    return new Item()
-        .withPrimaryKey(toPrimaryKey(id))
-        .with("liveStatus", gd.getLiveStatus())
-        .with("status", gd.getStatus().toString())
-        .with("winnerId", gd.getWinnerId())
-        .with("lastUpdated", gd.getLastUpdated())
-        .with("venue", gd.getVenue())
-        .with("shortVenue", gd.getShortVenue())
-        .withJSON("teamA", gd.getTeamA().toJson())
-        .withJSON("teamB", gd.getTeamB().toJson());
-  }
-
   private GameDetail toGame(Item i) {
     return new Gson().fromJson(i.toJSON(), GameDetail.class);
-  }
-
-  private static PrimaryKey toPrimaryKey(int id) {
-    return new PrimaryKey("id", id);
   }
 
   public Map<Integer, GameDetail> getGames(Set<Integer> id) {

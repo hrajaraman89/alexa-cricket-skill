@@ -23,6 +23,7 @@ import cricketskill.io.Stores;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -172,7 +173,10 @@ public class CricketSpeechlet implements Speechlet {
       LOG.info("Fetching {} non-favorite items", count);
 
       @SuppressWarnings("unchecked")
-      Set<Integer> seen = (Set<Integer>) session.getAttributes().getOrDefault("seenGameIds", Sets.newHashSet());
+      Collection<Integer> seenGameIds = (Collection<Integer>) session.getAttributes()
+          .getOrDefault("seenGameIds", Sets.newHashSet());
+
+      Set<Integer> seen = seenGameIds.stream().collect(Collectors.toSet());
 
       GameDetailClientResult newResult = _client.getDetails(start, count, seen);
 

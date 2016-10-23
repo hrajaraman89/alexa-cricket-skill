@@ -7,14 +7,19 @@ import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
+import cricketskill.common.TrackerUtils;
 import cricketskill.model.GameDetail;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class GameDetailStore extends DynamoStore {
+
+  private static final Logger LOG = LoggerFactory.getLogger(GameDetailStore.class);
 
   // use HTTPS if you are testing locally
   public GameDetailStore(Protocol protocol) {
@@ -33,6 +38,10 @@ public class GameDetailStore extends DynamoStore {
 
   public List<GameDetail> getGamesByTeam(Set<String> teams) {
 
+    return TrackerUtils.withTracking(() -> getGamesByTeamInternal(teams), "Get games for favorite team", LOG);
+  }
+
+  private List<GameDetail> getGamesByTeamInternal(Set<String> teams) {
     if (teams.isEmpty()) {
       return Lists.newArrayList();
     }

@@ -1,21 +1,30 @@
 package cricketskill.model;
 
+import com.google.common.collect.Lists;
 import com.google.gson.GsonBuilder;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 
 public class GameDetailClientResult {
-  private final int _total;
-  private final Map<Integer, GameDetail> _items;
+  private int _total;
+  private final List<GameDetail> _items;
 
   public GameDetailClientResult(int total, Map<Integer, GameDetail> items) {
+    this(total, Lists.newArrayList(items.values()));
+  }
+
+  public GameDetailClientResult(int total, List<GameDetail> items) {
     _total = total;
     _items = items;
   }
 
-  public Map<Integer, GameDetail> getItems() {
+  public List<GameDetail> getItems() {
     return _items;
+  }
+
+  public void addTotal(int total) {
+    _total += total;
   }
 
   public String toString() {

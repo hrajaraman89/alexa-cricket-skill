@@ -15,38 +15,45 @@ import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import cricketskill.api.GameDetailClient;
 import cricketskill.common.TrackerUtils;
-import cricketskill.io.DynamoDbClient;
+import cricketskill.io.Stores;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.StringJoiner;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 public class CricketSpeechlet implements Speechlet {
   private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
-  private final GameDetailClient _client;
 
-  private static final int PAGE_LENGTH = 3;
-  static final String START_KEY = "start";
+  private final GameDetailClient _client;
+  private final Stores _stores;
 
   private final Map<String, BiFunction<Intent, Session, SpeechletResponse>> _intentToHandler = ImmutableMap.of(
       "CurrentScoreIntent",
-      (i, s) -> getCurrentScoreResponse(s),
+      (i, s) -> handleCurrentScoreIntent(s, 1),
       "AMAZON.HelpIntent",
-      (i, s) -> getHelpResponse(),
+      (i, s) -> handleHelpIntent(),
       "NextScoreIntent",
       this::nextScoreIntent,
       "EndIntent",
-      (i, s) -> handleEndIntent()
+      (i, s) -> handleEndIntent(),
+      "AddFavoriteIntent",
+      this::handleAddFavoriteIntent
   );
 
   public CricketSpeechlet() {
@@ -54,8 +61,8 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   public CricketSpeechlet(Protocol protocol) {
-    DynamoDbClient dbClient = new DynamoDbClient(protocol);
-    _client = new GameDetailClient(dbClient);
+    _stores = new Stores(protocol);
+    _client = new GameDetailClient(_stores);
   }
 
   @Override
@@ -92,6 +99,27 @@ public class CricketSpeechlet implements Speechlet {
         .orElseThrow(onError);
   }
 
+  private SpeechletResponse handleAddFavoriteIntent(Intent intent, Session session) {
+
+    Slot slot = intent.getSlot("FavoriteCountry");
+
+    String slotValue = slot.getValue();
+
+    LOG.info("{} wants to add {}", session.getUser().getUserId(), slotValue);
+
+    String filtered = Arrays.stream(slotValue.split(" "))
+        .map(s -> Character.toUpperCase(s.charAt(0)) + s.substring(1))
+        .collect(Collectors.joining(" "));
+
+    try {
+      _stores.getFavoriteTeamStore().addFavoriteTeam(session.getUser().getUserId(), filtered);
+    } catch (Throwable t) {
+      LOG.error("Unable to add favorite {}", t.getMessage());
+    }
+
+    return newTellResponse("You want to add " + filtered + " as a favorite.", "Score Tracker");
+  }
+
   private SpeechletResponse handleEndIntent() {
     return newTellResponse("Okay, ending.", "Ending score tracker");
   }
@@ -99,10 +127,13 @@ public class CricketSpeechlet implements Speechlet {
   private SpeechletResponse nextScoreIntent(Intent intent, Session session) {
     Slot slot = intent.getSlot("NumberOfGames");
 
-    LOG.info("Slot value from number of games is {}", slot.getValue());
+    int count = Optional.ofNullable(slot.getValue())
+        .map(Integer::valueOf)
+        .orElse(1);
 
-    int count = Integer.valueOf(slot.getValue());
-    return getCurrentScoreResponse(session, count);
+    LOG.info("Slot value from number of games is {}. Count is {}", slot.getValue(), count);
+
+    return handleCurrentScoreIntent(session, count);
   }
 
   @Override
@@ -113,12 +144,7 @@ public class CricketSpeechlet implements Speechlet {
     // any cleanup logic goes here
   }
 
-  public SpeechletResponse getCurrentScoreResponse(Session session) {
-    return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, PAGE_LENGTH), "Get current score",
-        LOG);
-  }
-
-  private SpeechletResponse getCurrentScoreResponse(Session session, int count) {
+  SpeechletResponse handleCurrentScoreIntent(Session session, int count) {
     return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, count), "Get current score", LOG);
   }
 
@@ -126,44 +152,31 @@ public class CricketSpeechlet implements Speechlet {
 
     LOG.info("Getting current response");
 
-    int start = Optional.ofNullable(session.getAttribute(START_KEY))
-        .map(Object::toString)
-        .map(Integer::valueOf)
-        .orElse(0);
+    @SuppressWarnings("unchecked")
+    Collection<Integer> seenGameIds = (Collection<Integer>) session.getAttributes()
+        .getOrDefault("seenGameIds", Sets.newHashSet());
 
-    LOG.info("Session's start is {}", start);
+    LOG.info("Game ids {} has already been seen", seenGameIds);
 
-    GameDetailClientResult details = _client.getDetails(start, count);
+    Set<Integer> seen = seenGameIds.stream().collect(Collectors.toSet());
 
-    List<GameDetail> result = Lists.newArrayList(details.getItems().values());
+    List<GameDetail> items = getNext(count, seen, session.getUser().getUserId());
 
-    if (result.isEmpty()) {
+    if (items.isEmpty()) {
       return newTellResponse("There are no more current games", "Score Tracker");
     }
 
-    session.setAttribute(START_KEY, (start + result.size()));
+    items.stream()
+        .map(GameDetail::getId)
+        .forEach(seen::add);
 
-    LOG.info("Session's new start is {}", session.getAttribute(START_KEY));
+    session.setAttribute("seenGameIds", seen);
+
+    LOG.info("New seen games is {}", seen);
 
     StringBuilder sb = new StringBuilder();
 
-    sb.append("Giving updates on ");
-
-    if (start == 0) {
-      sb.append(String.format("first %d matches. ", result.size()));
-    } else if (start + result.size() < details.getTotal()) {
-      sb.append(String.format("matches %d to %d. ", start + 1, (start + result.size())));
-    } else {
-      sb.append(String.format("last %d matches. ", result.size()));
-    }
-
-    for (int i = 0; i < result.size(); i++) {
-      sb.append(" ")
-          .append(i + start + 1)
-          .append(". ");
-
-      appendDetailToStringBuilder(sb, result.get(i));
-    }
+    items.forEach(i -> appendDetailToStringBuilder(sb, i));
 
     String speechText = sb.toString();
 
@@ -179,8 +192,7 @@ public class CricketSpeechlet implements Speechlet {
     speech.setText(speechText);
 
     PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
-    outputSpeech.setText(
-        "If you want more scores, you can say something like \"Give me the next 5 scores.\" To stop, say \"stop.\"");
+    outputSpeech.setText("Would you like to hear the next match? You can say \"Yes\" or \"No\".");
 
     Reprompt reprompt = new Reprompt();
     reprompt.setOutputSpeech(outputSpeech);
@@ -188,9 +200,32 @@ public class CricketSpeechlet implements Speechlet {
     return SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
+  private List<GameDetail> getNext(int count, Set<Integer> seen, String userId) {
+
+    GameDetailClientResult result = _client.getDetails();
+
+    final Set<String> teams = _stores.getFavoriteTeamStore().getFavoriteTeams(userId);
+
+    List<GameDetail> items = result.getItems();
+
+    List<GameDetail> unseen = items.stream()
+        .filter(i -> !seen.contains(i.getId()))
+        .sorted((o1, o2) -> isFavoriteTeamPlaying(o1, teams) ? -1 : 1)
+        .collect(Collectors.toList());
+
+    LOG.info("unseen game ids {}", unseen.stream().map(GameDetail::getId).collect(Collectors.toList()));
+
+    return unseen.subList(0, Math.min(count, unseen.size()));
+  }
+
+  private static boolean isFavoriteTeamPlaying(GameDetail gd, Set<String> teams) {
+    return Stream.of(gd.getTeamAName(), gd.getTeamBName())
+        .anyMatch(teams::contains);
+  }
+
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
     sb.append(gd.getTeamAName())
-        .append(String.format(" %s ", gd.getStatus() == MatchStatus.COMPLETE ? "played" : "is playing"))
+        .append(String.format(" %s ", gd.getStatusEnum() == MatchStatus.COMPLETE ? "played" : "is playing"))
         .append(gd.getTeamBName())
         .append(" at ")
         .append(gd.getShortVenue())
@@ -202,7 +237,7 @@ public class CricketSpeechlet implements Speechlet {
   private SpeechletResponse getWelcomeResponse() {
     String speechText =
         "Welcome to Score Tracker, you can ask me what the score is by saying, \"what is the current score?\"";
-    return newAskResponse(speechText, "Current Score");
+    return newAskResponse(speechText, "Score Tracker");
   }
 
   /**
@@ -210,7 +245,7 @@ public class CricketSpeechlet implements Speechlet {
    *
    * @return SpeechletResponse spoken and visual response for the given intent
    */
-  private SpeechletResponse getHelpResponse() {
+  private SpeechletResponse handleHelpIntent() {
     String speechText = "You can say give me an update on the games to me!";
     String title = "Current Score - Help";
     return newAskResponse(speechText, title);

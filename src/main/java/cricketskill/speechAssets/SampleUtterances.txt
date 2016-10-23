@@ -4,6 +4,7 @@ CurrentScoreIntent who is playing
 CurrentScoreIntent what team is playing
 CurrentScoreIntent what games are on
 CurrentScoreIntent give me an update on the games
+CurrentScoreIntent update
 
 NextScoreIntent give me the next {NumberOfGames} scores
 NextScoreIntent give me scores for the next {NumberOfGames} games
@@ -11,10 +12,15 @@ NextScoreIntent {NumberOfGames} games
 NextScoreIntent next {NumberOfGames} games
 NextScoreIntent next {NumberOfGames} scores
 NextScoreIntent next {NumberOfGames}
+NextScoreIntent yes
+NextScoreIntent next
 
 EndIntent stop
 EndIntent end
+EndIntent no
 EndIntent no more scores
 
-OscarIntent which team is the best team
-OscarIntent which team is the best
+AddFavoriteIntent add favorite team {FavoriteCountry}
+AddFavoriteIntent add {FavoriteCountry} to favorites
+AddFavoriteIntent to add {FavoriteCountry} to favorites
+AddFavoriteIntent add team {FavoriteCountry} to favorites

@@ -1,7 +1,8 @@
 package cricketskill.api;
 
 import com.amazonaws.Protocol;
-import cricketskill.io.DynamoDbClient;
+import com.google.common.collect.Sets;
+import cricketskill.io.Stores;
 import cricketskill.model.GameDetailClientResult;
 import org.junit.Test;
 
@@ -11,9 +12,8 @@ public class GameDetailClientTest {
   @Test
   public void testGetDetails()
       throws Exception {
-    DynamoDbClient dynamoDbClient = new DynamoDbClient(Protocol.HTTPS);
-    GameDetailClientResult details = new GameDetailClient(dynamoDbClient)
-        .getDetails(0, 3);
+    GameDetailClientResult details = new GameDetailClient(new Stores(Protocol.HTTPS))
+        .getDetails();
 
     System.out.println(details);
   }

@@ -21,7 +21,7 @@ public class CricketSpeechletTest {
 
     String userId = String.valueOf(System.currentTimeMillis());
 
-    Map<String, Object> attributes = Maps.newHashMap(ImmutableMap.of("seenGameIds", Sets.newHashSet(76937)));
+    Map<String, Object> attributes = Maps.newHashMap(ImmutableMap.of("seenGameIds", Sets.newHashSet(78807)));
 
     Session session = Session.builder()
         .withSessionId("session")
@@ -31,13 +31,11 @@ public class CricketSpeechletTest {
             .build())
         .build();
 
-    session.setAttribute(CricketSpeechlet.START_KEY, 4);
-
     new FavoriteTeamStore(Protocol.HTTPS)
-        .addFavoriteTeam(userId, "Namibia");
+        .addFavoriteTeam(userId, "West Indies");
 
     CricketSpeechlet cricketSpeechlet = new CricketSpeechlet(Protocol.HTTPS);
-    SpeechletResponse result = cricketSpeechlet.handleCurrentScoreIntent(session);
+    SpeechletResponse result = cricketSpeechlet.handleCurrentScoreIntent(session, 2);
 
     assertTrue(result != null);
   }

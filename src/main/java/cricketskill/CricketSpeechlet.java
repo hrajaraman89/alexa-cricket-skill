@@ -15,7 +15,6 @@ import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import cricketskill.api.GameDetailClient;
 import cricketskill.common.TrackerUtils;
@@ -31,21 +30,20 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 public class CricketSpeechlet implements Speechlet {
   private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
-  private static final int PAGE_LENGTH = 3;
-  static final String START_KEY = "start";
 
   private final GameDetailClient _client;
   private final Stores _stores;
 
   private final Map<String, BiFunction<Intent, Session, SpeechletResponse>> _intentToHandler = ImmutableMap.of(
       "CurrentScoreIntent",
-      (i, s) -> handleCurrentScoreIntent(s),
+      (i, s) -> handleCurrentScoreIntent(s, 1),
       "AMAZON.HelpIntent",
       (i, s) -> handleHelpIntent(),
       "NextScoreIntent",
@@ -141,11 +139,7 @@ public class CricketSpeechlet implements Speechlet {
     // any cleanup logic goes here
   }
 
-  public SpeechletResponse handleCurrentScoreIntent(Session session) {
-    return handleCurrentScoreIntent(session, PAGE_LENGTH);
-  }
-
-  private SpeechletResponse handleCurrentScoreIntent(Session session, int count) {
+  SpeechletResponse handleCurrentScoreIntent(Session session, int count) {
     return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, count), "Get current score", LOG);
   }
 
@@ -153,66 +147,31 @@ public class CricketSpeechlet implements Speechlet {
 
     LOG.info("Getting current response");
 
-    int start = Optional.ofNullable(session.getAttribute(START_KEY))
-        .map(Object::toString)
-        .map(Integer::valueOf)
-        .orElse(0);
+    @SuppressWarnings("unchecked")
+    Collection<Integer> seenGameIds = (Collection<Integer>) session.getAttributes()
+        .getOrDefault("seenGameIds", Sets.newHashSet());
 
-    LOG.info("Session's start is {}", start);
+    LOG.info("Game ids {} has already been seen", seenGameIds);
 
-    GameDetailClientResult result = new GameDetailClientResult(0, Lists.newArrayList());
+    Set<Integer> seen = seenGameIds.stream().collect(Collectors.toSet());
 
-    if (start == 0) {
-      result = getFromFavorites(session);
-    }
-
-    if (result.getTotal() < count) {
-
-      count -= result.getTotal();
-
-      LOG.info("Fetching {} non-favorite items", count);
-
-      @SuppressWarnings("unchecked")
-      Collection<Integer> seenGameIds = (Collection<Integer>) session.getAttributes()
-          .getOrDefault("seenGameIds", Sets.newHashSet());
-
-      Set<Integer> seen = seenGameIds.stream().collect(Collectors.toSet());
-
-      GameDetailClientResult newResult = _client.getDetails(start, count, seen);
-
-      result.getItems().addAll(newResult.getItems());
-      result.addTotal(newResult.getTotal());
-    }
-
-    List<GameDetail> items = result.getItems();
+    List<GameDetail> items = getNext(count, seen, session.getUser().getUserId());
 
     if (items.isEmpty()) {
       return newTellResponse("There are no more current games", "Score Tracker");
     }
 
-    session.setAttribute(START_KEY, (start + items.size()));
+    items.stream()
+        .map(GameDetail::getId)
+        .forEach(seen::add);
 
-    LOG.info("Session's new start is {}", session.getAttribute(START_KEY));
+    session.setAttribute("seenGameIds", seen);
+
+    LOG.info("New seen games is {}", seen);
 
     StringBuilder sb = new StringBuilder();
 
-    sb.append("Giving updates on ");
-
-    if (start == 0) {
-      sb.append(String.format("first %d matches. ", items.size()));
-    } else if (start + items.size() < result.getTotal()) {
-      sb.append(String.format("matches %d to %d. ", start + 1, (start + items.size())));
-    } else {
-      sb.append(String.format("last %d matches. ", items.size()));
-    }
-
-    for (int i = 0; i < items.size(); i++) {
-      sb.append(" ")
-          .append(i + start + 1)
-          .append(". ");
-
-      appendDetailToStringBuilder(sb, items.get(i));
-    }
+    items.forEach(i -> appendDetailToStringBuilder(sb, i));
 
     String speechText = sb.toString();
 
@@ -229,7 +188,7 @@ public class CricketSpeechlet implements Speechlet {
 
     PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
     outputSpeech.setText(
-        "If you want more scores, you can say something like \"Give me the next 5 scores.\" To stop, say \"stop.\"");
+        "Would you like to hear the next match? You can say \"Yes\" or \"No\". To stop, say \"stop.\"");
 
     Reprompt reprompt = new Reprompt();
     reprompt.setOutputSpeech(outputSpeech);
@@ -237,24 +196,27 @@ public class CricketSpeechlet implements Speechlet {
     return SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
-  private GameDetailClientResult getFromFavorites(Session session) {
+  private List<GameDetail> getNext(int count, Set<Integer> seen, String userId) {
 
-    //get favorite ids
-    //get favorite games
-    //add them to 'seen' so that they don't repeat
+    GameDetailClientResult result = _client.getDetails();
 
-    Set<String> favorites = _stores.getFavoriteTeamStore().getFavoriteTeams(session.getUser().getUserId());
+    final Set<String> teams = _stores.getFavoriteTeamStore().getFavoriteTeams(userId);
 
-    List<GameDetail> items = _stores.getGameDetailStore().getGamesByTeam(favorites);
+    List<GameDetail> items = result.getItems();
 
-    GameDetailClientResult result = new GameDetailClientResult(items.size(), items);
+    List<GameDetail> unseen = items.stream()
+        .filter(i -> !seen.contains(i.getId()))
+        .sorted((o1, o2) -> isFavoriteTeamPlaying(o1, teams) ? -1 : 1)
+        .collect(Collectors.toList());
 
-    Set<Integer> gameIds = items.stream().map(GameDetail::getId).collect(Collectors.toSet());
+    LOG.info("unseen game ids {}", unseen.stream().map(GameDetail::getId).collect(Collectors.toList()));
 
-    LOG.info("Games from favorites add as 'seen' {}", gameIds);
+    return unseen.subList(0, Math.min(count, unseen.size()));
+  }
 
-    session.setAttribute("seenGameIds", gameIds);
-    return result;
+  private static boolean isFavoriteTeamPlaying(GameDetail gd, Set<String> teams) {
+    return Stream.of(gd.getTeamAName(), gd.getTeamBName())
+        .anyMatch(teams::contains);
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
@@ -271,7 +233,7 @@ public class CricketSpeechlet implements Speechlet {
   private SpeechletResponse getWelcomeResponse() {
     String speechText =
         "Welcome to Score Tracker, you can ask me what the score is by saying, \"what is the current score?\"";
-    return newAskResponse(speechText, "Current Score");
+    return newAskResponse(speechText, "Score Tracker");
   }
 
   /**

@@ -13,7 +13,7 @@ public class GameDetailClientTest {
   public void testGetDetails()
       throws Exception {
     GameDetailClientResult details = new GameDetailClient(new Stores(Protocol.HTTPS))
-        .getDetails(0, 1, Sets.newHashSet());
+        .getDetails();
 
     System.out.println(details);
   }

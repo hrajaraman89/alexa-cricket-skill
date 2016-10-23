@@ -4,6 +4,7 @@ import com.amazonaws.Protocol;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import cricketskill.model.GameDetail;
@@ -31,6 +32,11 @@ public class GameDetailStore extends DynamoStore {
   }
 
   public List<GameDetail> getGamesByTeam(Set<String> teams) {
+
+    if (teams.isEmpty()) {
+      return Lists.newArrayList();
+    }
+
     Map<String, AttributeValue> eav = Maps.newHashMap();
 
     int i = 1;
@@ -48,9 +54,7 @@ public class GameDetailStore extends DynamoStore {
         .withFilterExpression(conditionExpression)
         .withExpressionAttributeValues(eav);
 
-    List<GameDetail> result = scan(scanExpression, GameDetail.class);
-
-    return result;
+    return scan(scanExpression, GameDetail.class);
   }
 
   private static String getConditionExpression(int numTeams) {

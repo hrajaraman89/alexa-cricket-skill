@@ -16,6 +16,7 @@ import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 class DynamoStore {
@@ -60,6 +61,8 @@ class DynamoStore {
   }
 
   protected  <T> List<T> scan(DynamoDBScanExpression expression, Class<T> clazz) {
-    return new DynamoDBMapper(_client).scan(clazz, expression);
+    return new DynamoDBMapper(_client).scan(clazz, expression)
+        .stream()
+        .collect(Collectors.toList());
   }
 }

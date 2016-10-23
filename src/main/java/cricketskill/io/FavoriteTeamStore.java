@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 
 public class FavoriteTeamStore extends DynamoStore {
-  protected FavoriteTeamStore(Protocol protocol) {
+  public FavoriteTeamStore(Protocol protocol) {
     super(protocol, "FavoriteTeams");
   }
 

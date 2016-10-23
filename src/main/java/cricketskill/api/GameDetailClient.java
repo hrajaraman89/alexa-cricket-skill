@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +25,7 @@ public class GameDetailClient {
     _stores = stores;
   }
 
-  public GameDetailClientResult getDetails(int start, int count) {
+  public GameDetailClientResult getDetails(int start, int count, Set<Integer> seen) {
 
     List<Integer> gameIds = withTracking(_stores.getGameIdsStore()::getGameIds, "Get Game Ids", LOG);
 
@@ -36,12 +37,16 @@ public class GameDetailClient {
       return new GameDetailClientResult(0, Maps.newHashMap());
     }
 
-    int end = Math.min((start + count), gameIds.size());
+    List<Integer> filteredGameIds = gameIds.stream()
+        .filter(i -> !seen.contains(i))
+        .collect(Collectors.toList());
+
+    int end = Math.min((start + count), filteredGameIds.size());
 
     LOG.info("Fetching games # {} to {}", start, end);
 
-    List<Integer> integers = gameIds.subList(start, end);
-    return getGameDetail(Sets.newHashSet(integers), gameIds.size());
+    List<Integer> integers = filteredGameIds.subList(start, end);
+    return getGameDetail(Sets.newHashSet(integers), filteredGameIds.size());
   }
 
   private GameDetailClientResult getGameDetail(Set<Integer> ids, int total) {

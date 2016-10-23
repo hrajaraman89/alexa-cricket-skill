@@ -16,6 +16,7 @@ import com.amazon.speech.ui.SimpleCard;
 import com.amazonaws.Protocol;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import cricketskill.api.GameDetailClient;
 import cricketskill.common.TrackerUtils;
 import cricketskill.io.Stores;
@@ -25,8 +26,10 @@ import cricketskill.model.MatchStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,15 +159,34 @@ public class CricketSpeechlet implements Speechlet {
 
     LOG.info("Session's start is {}", start);
 
-    GameDetailClientResult details = _client.getDetails(start, count);
+    GameDetailClientResult result = new GameDetailClientResult(0, Lists.newArrayList());
 
-    List<GameDetail> result = Lists.newArrayList(details.getItems().values());
+    if (start == 0) {
+      result = getFromFavorites(session);
+    }
 
-    if (result.isEmpty()) {
+    if (result.getTotal() < count) {
+
+      count -= result.getTotal();
+
+      LOG.info("Fetching {} non-favorite items", count);
+
+      @SuppressWarnings("unchecked")
+      Set<Integer> seen = (Set<Integer>) session.getAttributes().getOrDefault("seenGameIds", Sets.newHashSet());
+
+      GameDetailClientResult newResult = _client.getDetails(start, count, seen);
+
+      result.getItems().addAll(newResult.getItems());
+      result.addTotal(newResult.getTotal());
+    }
+
+    List<GameDetail> items = result.getItems();
+
+    if (items.isEmpty()) {
       return newTellResponse("There are no more current games", "Score Tracker");
     }
 
-    session.setAttribute(START_KEY, (start + result.size()));
+    session.setAttribute(START_KEY, (start + items.size()));
 
     LOG.info("Session's new start is {}", session.getAttribute(START_KEY));
 
@@ -173,19 +195,19 @@ public class CricketSpeechlet implements Speechlet {
     sb.append("Giving updates on ");
 
     if (start == 0) {
-      sb.append(String.format("first %d matches. ", result.size()));
-    } else if (start + result.size() < details.getTotal()) {
-      sb.append(String.format("matches %d to %d. ", start + 1, (start + result.size())));
+      sb.append(String.format("first %d matches. ", items.size()));
+    } else if (start + items.size() < result.getTotal()) {
+      sb.append(String.format("matches %d to %d. ", start + 1, (start + items.size())));
     } else {
-      sb.append(String.format("last %d matches. ", result.size()));
+      sb.append(String.format("last %d matches. ", items.size()));
     }
 
-    for (int i = 0; i < result.size(); i++) {
+    for (int i = 0; i < items.size(); i++) {
       sb.append(" ")
           .append(i + start + 1)
           .append(". ");
 
-      appendDetailToStringBuilder(sb, result.get(i));
+      appendDetailToStringBuilder(sb, items.get(i));
     }
 
     String speechText = sb.toString();
@@ -209,6 +231,26 @@ public class CricketSpeechlet implements Speechlet {
     reprompt.setOutputSpeech(outputSpeech);
 
     return SpeechletResponse.newAskResponse(speech, reprompt, card);
+  }
+
+  private GameDetailClientResult getFromFavorites(Session session) {
+
+    //get favorite ids
+    //get favorite games
+    //add them to 'seen' so that they don't repeat
+
+    Set<String> favorites = _stores.getFavoriteTeamStore().getFavoriteTeams(session.getUser().getUserId());
+
+    List<GameDetail> items = _stores.getGameDetailStore().getGamesByTeam(favorites);
+
+    GameDetailClientResult result = new GameDetailClientResult(items.size(), items);
+
+    Set<Integer> gameIds = items.stream().map(GameDetail::getId).collect(Collectors.toSet());
+
+    LOG.info("Games from favorites add as 'seen' {}", gameIds);
+
+    session.setAttribute("seenGameIds", gameIds);
+    return result;
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {

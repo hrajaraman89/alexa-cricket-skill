@@ -7,7 +7,7 @@ import java.util.Map;
 
 
 public class GameDetailClientResult {
-  private int _total;
+  private final int _total;
   private final List<CricketGameDetail> _items;
 
   public GameDetailClientResult(int total, Map<Integer, CricketGameDetail> items) {
@@ -21,10 +21,6 @@ public class GameDetailClientResult {
 
   public List<CricketGameDetail> getItems() {
     return _items;
-  }
-
-  public void addTotal(int total) {
-    _total += total;
   }
 
   public String toString() {

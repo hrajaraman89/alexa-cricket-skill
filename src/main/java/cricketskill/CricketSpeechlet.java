@@ -73,6 +73,14 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   @Override
+  public void onSessionEnded(final SessionEndedRequest request, final Session session)
+      throws SpeechletException {
+    LOG.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(),
+        session.getSessionId());
+    // any cleanup logic goes here
+  }
+
+  @Override
   public SpeechletResponse onLaunch(final LaunchRequest request, final Session session)
       throws SpeechletException {
     LOG.info("onLaunch requestId={}, sessionId={}", request.getRequestId(),
@@ -133,14 +141,6 @@ public class CricketSpeechlet implements Speechlet {
     LOG.info("Slot value from number of games is {}. Count is {}", slot.getValue(), count);
 
     return handleCurrentScoreIntent(session, count);
-  }
-
-  @Override
-  public void onSessionEnded(final SessionEndedRequest request, final Session session)
-      throws SpeechletException {
-    LOG.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(),
-        session.getSessionId());
-    // any cleanup logic goes here
   }
 
   SpeechletResponse handleCurrentScoreIntent(Session session, int count) {
@@ -258,8 +258,7 @@ public class CricketSpeechlet implements Speechlet {
    */
   private SpeechletResponse handleHelpIntent() {
     String speechText = "You can say give me an update on the games to me!";
-    String title = "Current Score - Help";
-    return newAskResponse(speechText, title);
+    return newAskResponse(speechText, "Score Tracker - Help");
   }
 
   private static SpeechletResponse newResponse(String text, String title, boolean isAsk) {

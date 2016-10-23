@@ -5,7 +5,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.google.gson.Gson;
 
 
-@SuppressWarnings({"CheckStyle"})
+@SuppressWarnings({"CheckStyle", "unused"})
 @DynamoDBTable(tableName = "CricketGameDetail")
 public class CricketGameDetail {
   private int id;

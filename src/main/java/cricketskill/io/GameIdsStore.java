@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 
 public class GameIdsStore extends DynamoStore {
 
-  protected GameIdsStore(Protocol protocol) {
+  GameIdsStore(Protocol protocol) {
     super(protocol, "CricketGameIds");
   }
 

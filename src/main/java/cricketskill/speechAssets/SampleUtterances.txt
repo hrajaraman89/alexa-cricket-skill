@@ -11,9 +11,11 @@ NextScoreIntent {NumberOfGames} games
 NextScoreIntent next {NumberOfGames} games
 NextScoreIntent next {NumberOfGames} scores
 NextScoreIntent next {NumberOfGames}
+NextScoreIntent yes
 
 EndIntent stop
 EndIntent end
+EndIntent no
 EndIntent no more scores
 
 AddFavoriteIntent add favorite team {FavoriteCountry}

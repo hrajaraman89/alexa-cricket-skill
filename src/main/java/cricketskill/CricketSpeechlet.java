@@ -125,9 +125,12 @@ public class CricketSpeechlet implements Speechlet {
   private SpeechletResponse nextScoreIntent(Intent intent, Session session) {
     Slot slot = intent.getSlot("NumberOfGames");
 
-    LOG.info("Slot value from number of games is {}", slot.getValue());
+    int count = Optional.ofNullable(slot.getValue())
+        .map(Integer::valueOf)
+        .orElse(1);
 
-    int count = Integer.valueOf(slot.getValue());
+    LOG.info("Slot value from number of games is {}. Count is {}", slot.getValue(), count);
+
     return handleCurrentScoreIntent(session, count);
   }
 

@@ -33,10 +33,11 @@ import org.slf4j.LoggerFactory;
 
 public class CricketSpeechlet implements Speechlet {
   private static final Logger LOG = LoggerFactory.getLogger(CricketSpeechlet.class);
-  private final GameDetailClient _client;
-
   private static final int PAGE_LENGTH = 3;
   static final String START_KEY = "start";
+
+  private final GameDetailClient _client;
+  private final Stores _stores;
 
   private final Map<String, BiFunction<Intent, Session, SpeechletResponse>> _intentToHandler = ImmutableMap.of(
       "CurrentScoreIntent",
@@ -48,7 +49,7 @@ public class CricketSpeechlet implements Speechlet {
       "EndIntent",
       (i, s) -> handleEndIntent(),
       "AddFavoriteIntent",
-      (i, s) -> handleAddFavoriteIntent(i, s)
+      this::handleAddFavoriteIntent
   );
 
   public CricketSpeechlet() {
@@ -56,8 +57,8 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   public CricketSpeechlet(Protocol protocol) {
-    Stores stores = new Stores(protocol);
-    _client = new GameDetailClient(stores);
+    _stores = new Stores(protocol);
+    _client = new GameDetailClient(_stores);
   }
 
   @Override
@@ -104,6 +105,12 @@ public class CricketSpeechlet implements Speechlet {
 
     if (!Character.isUpperCase(slotValue.charAt(0))) {
       return newTellResponse("Sorry, we're having trouble adding that country.", "Score Tracker");
+    }
+
+    try {
+      _stores.getFavoriteTeamStore().addFavoriteTeam(session.getUser().getUserId(), slotValue);
+    } catch (Throwable t) {
+      LOG.error("Unable to add favorite {}", t.getMessage());
     }
 
     return newTellResponse("You want to add " + slotValue + " as a favorite.", "Score Tracker");

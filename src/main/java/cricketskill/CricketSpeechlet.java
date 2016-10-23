@@ -264,31 +264,8 @@ public class CricketSpeechlet implements Speechlet {
         .append(" at ")
         .append(gd.getShortVenue())
         .append(". ")
-        .append(getLiveStatus(gd))
+        .append(gd.getLiveStatus())
         .append(". ");
-  }
-
-  private static String getLiveStatus(GameDetail gd) {
-    StringBuilder sb = new StringBuilder();
-
-    sb.append(gd.getBattingTeamName())
-        .append(" have scored ")
-        .append(gd.getRuns())
-        .append(" runs, at the loss of ")
-        .append(gd.getWickets() == 0 ? "no" : gd.getWickets())
-        .append(" wickets.")
-        .append(" Their run rate is ")
-        .append(gd.getRunRate());
-
-    if (gd.getTarget() > 0) {
-      sb.append(". ")
-          .append(gd.getBattingTeamName())
-          .append(" are chasing ")
-          .append(gd.getTarget())
-          .append(" runs.");
-    }
-
-    return sb.toString();
   }
 
   private SpeechletResponse getWelcomeResponse() {

@@ -22,11 +22,13 @@ import cricketskill.io.Stores;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -105,17 +107,17 @@ public class CricketSpeechlet implements Speechlet {
 
     LOG.info("{} wants to add {}", session.getUser().getUserId(), slotValue);
 
-    if (!Character.isUpperCase(slotValue.charAt(0))) {
-      return newTellResponse("Sorry, we're having trouble adding that country.", "Score Tracker");
-    }
+    String filtered = Arrays.stream(slotValue.split(" "))
+        .map(s -> Character.toUpperCase(s.charAt(0)) + s.substring(1))
+        .collect(Collectors.joining(" "));
 
     try {
-      _stores.getFavoriteTeamStore().addFavoriteTeam(session.getUser().getUserId(), slotValue);
+      _stores.getFavoriteTeamStore().addFavoriteTeam(session.getUser().getUserId(), filtered);
     } catch (Throwable t) {
       LOG.error("Unable to add favorite {}", t.getMessage());
     }
 
-    return newTellResponse("You want to add " + slotValue + " as a favorite.", "Score Tracker");
+    return newTellResponse("You want to add " + filtered + " as a favorite.", "Score Tracker");
   }
 
   private SpeechletResponse handleEndIntent() {
@@ -190,8 +192,7 @@ public class CricketSpeechlet implements Speechlet {
     speech.setText(speechText);
 
     PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
-    outputSpeech.setText(
-        "Would you like to hear the next match? You can say \"Yes\" or \"No\". To stop, say \"stop.\"");
+    outputSpeech.setText("Would you like to hear the next match? You can say \"Yes\" or \"No\".");
 
     Reprompt reprompt = new Reprompt();
     reprompt.setOutputSpeech(outputSpeech);

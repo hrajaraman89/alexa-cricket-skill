@@ -19,7 +19,7 @@ import com.google.common.collect.Sets;
 import cricketskill.api.GameDetailClient;
 import cricketskill.common.TrackerUtils;
 import cricketskill.io.Stores;
-import cricketskill.model.GameDetail;
+import cricketskill.model.CricketGameDetail;
 import cricketskill.model.GameDetailClientResult;
 import cricketskill.model.MatchStatus;
 import java.util.Arrays;
@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -71,6 +70,14 @@ public class CricketSpeechlet implements Speechlet {
     LOG.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(),
         session.getSessionId());
     // any initialization logic goes here
+  }
+
+  @Override
+  public void onSessionEnded(final SessionEndedRequest request, final Session session)
+      throws SpeechletException {
+    LOG.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(),
+        session.getSessionId());
+    // any cleanup logic goes here
   }
 
   @Override
@@ -136,14 +143,6 @@ public class CricketSpeechlet implements Speechlet {
     return handleCurrentScoreIntent(session, count);
   }
 
-  @Override
-  public void onSessionEnded(final SessionEndedRequest request, final Session session)
-      throws SpeechletException {
-    LOG.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(),
-        session.getSessionId());
-    // any cleanup logic goes here
-  }
-
   SpeechletResponse handleCurrentScoreIntent(Session session, int count) {
     return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, count), "Get current score", LOG);
   }
@@ -160,14 +159,15 @@ public class CricketSpeechlet implements Speechlet {
 
     Set<Integer> seen = seenGameIds.stream().collect(Collectors.toSet());
 
-    List<GameDetail> items = getNext(count, seen, session.getUser().getUserId());
+    GameDetailClientResult gameDetailClientResult = getNext(count, seen, session.getUser().getUserId());
+    List<CricketGameDetail> items = gameDetailClientResult.getItems();
 
     if (items.isEmpty()) {
       return newTellResponse("There are no more current games", "Score Tracker");
     }
 
     items.stream()
-        .map(GameDetail::getId)
+        .map(CricketGameDetail::getId)
         .forEach(seen::add);
 
     session.setAttribute("seenGameIds", seen);
@@ -176,7 +176,17 @@ public class CricketSpeechlet implements Speechlet {
 
     StringBuilder sb = new StringBuilder();
 
+    if (seenGameIds.isEmpty()) {
+      sb.append(String.format("There are a total of %d games. ", gameDetailClientResult.getTotal()));
+    }
+
     items.forEach(i -> appendDetailToStringBuilder(sb, i));
+
+    boolean reachedEndOfUpdate = seen.size() == gameDetailClientResult.getTotal();
+
+    if (reachedEndOfUpdate) {
+      sb.append(" This is the last game.");
+    }
 
     String speechText = sb.toString();
 
@@ -197,33 +207,34 @@ public class CricketSpeechlet implements Speechlet {
     Reprompt reprompt = new Reprompt();
     reprompt.setOutputSpeech(outputSpeech);
 
-    return SpeechletResponse.newAskResponse(speech, reprompt, card);
+    return reachedEndOfUpdate ? SpeechletResponse.newTellResponse(speech, card)
+        : SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
-  private List<GameDetail> getNext(int count, Set<Integer> seen, String userId) {
+  private GameDetailClientResult getNext(int count, Set<Integer> seen, String userId) {
 
     GameDetailClientResult result = _client.getDetails();
 
     final Set<String> teams = _stores.getFavoriteTeamStore().getFavoriteTeams(userId);
 
-    List<GameDetail> items = result.getItems();
+    List<CricketGameDetail> items = result.getItems();
 
-    List<GameDetail> unseen = items.stream()
+    List<CricketGameDetail> unseen = items.stream()
         .filter(i -> !seen.contains(i.getId()))
         .sorted((o1, o2) -> isFavoriteTeamPlaying(o1, teams) ? -1 : 1)
         .collect(Collectors.toList());
 
-    LOG.info("unseen game ids {}", unseen.stream().map(GameDetail::getId).collect(Collectors.toList()));
+    LOG.info("unseen game ids {}", unseen.stream().map(CricketGameDetail::getId).collect(Collectors.toList()));
 
-    return unseen.subList(0, Math.min(count, unseen.size()));
+    return new GameDetailClientResult(result.getTotal(), unseen.subList(0, Math.min(count, unseen.size())));
   }
 
-  private static boolean isFavoriteTeamPlaying(GameDetail gd, Set<String> teams) {
+  private static boolean isFavoriteTeamPlaying(CricketGameDetail gd, Set<String> teams) {
     return Stream.of(gd.getTeamAName(), gd.getTeamBName())
         .anyMatch(teams::contains);
   }
 
-  private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
+  private static void appendDetailToStringBuilder(StringBuilder sb, CricketGameDetail gd) {
     sb.append(gd.getTeamAName())
         .append(String.format(" %s ", gd.getStatusEnum() == MatchStatus.COMPLETE ? "played" : "is playing"))
         .append(gd.getTeamBName())
@@ -247,8 +258,7 @@ public class CricketSpeechlet implements Speechlet {
    */
   private SpeechletResponse handleHelpIntent() {
     String speechText = "You can say give me an update on the games to me!";
-    String title = "Current Score - Help";
-    return newAskResponse(speechText, title);
+    return newAskResponse(speechText, "Score Tracker - Help");
   }
 
   private static SpeechletResponse newResponse(String text, String title, boolean isAsk) {

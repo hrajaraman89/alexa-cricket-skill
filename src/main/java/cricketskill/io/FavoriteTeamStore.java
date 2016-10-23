@@ -26,11 +26,11 @@ public class FavoriteTeamStore extends DynamoStore {
         .collect(Collectors.toSet());
   }
 
-  public boolean addFavoriteTeam(String userId, String team) {
+  public void addFavoriteTeam(String userId, String team) {
     Set<String> currentTeams = getFavoriteTeams(userId);
 
     if (currentTeams.contains(team)) {
-      return true;
+      return;
     }
 
     currentTeams.add(team);
@@ -38,8 +38,6 @@ public class FavoriteTeamStore extends DynamoStore {
     Item i = toItem(userId, currentTeams);
 
     put(i);
-
-    return true;
   }
 
   private Item toItem(String userId, Set<String> teams) {

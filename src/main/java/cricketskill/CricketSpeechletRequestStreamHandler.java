@@ -14,16 +14,16 @@ import com.amazon.speech.speechlet.lambda.SpeechletRequestStreamHandler;
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public final class CricketSpeechletRequestStreamHandler extends SpeechletRequestStreamHandler {
-    private static final Set<String> supportedApplicationIds = new HashSet<>();
+    private static final Set<String> SUPPORTED_APPLICATION_IDS = new HashSet<>();
     static {
         /*
          * This Id can be found on https://developer.amazon.com/edw/home.html#/ "Edit" the relevant
          * Alexa Skill and put the relevant Application Ids in this Set.
          */
-        supportedApplicationIds.add("amzn1.ask.skill.df054977-bd58-49b7-8ba0-befb1c36ecbf");
+        SUPPORTED_APPLICATION_IDS.add("amzn1.ask.skill.df054977-bd58-49b7-8ba0-befb1c36ecbf");
     }
 
     public CricketSpeechletRequestStreamHandler() {
-        super(new CricketSpeechlet(), supportedApplicationIds);
+        super(new CricketSpeechlet(), SUPPORTED_APPLICATION_IDS);
     }
 }

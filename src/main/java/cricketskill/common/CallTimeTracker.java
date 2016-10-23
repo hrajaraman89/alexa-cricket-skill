@@ -1,29 +1,29 @@
 package cricketskill.common;
 
 public class CallTimeTracker {
-  private final String operation;
-  private long start;
-  private long end;
+  private final String _operation;
+  private long _start;
+  private long _end;
 
   public CallTimeTracker(String operation) {
-    this.operation = operation;
+    this._operation = operation;
   }
 
   public CallTimeTracker tic() {
-    start = System.currentTimeMillis();
+    _start = System.currentTimeMillis();
     return this;
   }
 
   public CallTimeTracker toc() {
-    end = System.currentTimeMillis();
+    _end = System.currentTimeMillis();
     return this;
   }
 
   public long elapsed() {
-    return (end == 0 ? System.currentTimeMillis() : end) - start;
+    return (_end == 0 ? System.currentTimeMillis() : _end) - _start;
   }
 
   public String toString() {
-    return String.format("%s took %d ms", operation, (end - start));
+    return String.format("%s took %d ms", _operation, (_end - _start));
   }
 }

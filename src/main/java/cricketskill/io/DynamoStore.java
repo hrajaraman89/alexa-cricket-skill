@@ -42,7 +42,12 @@ class DynamoStore {
     _table.putItem(i);
   }
 
-  protected  <T> List<Item> batchGet(Set<T> primaryKeys, String primaryKeyName) {
+  protected <T> List<Item> batchGet(Set<T> primaryKeys, String primaryKeyName) {
+
+    if (primaryKeys.isEmpty()) {
+      return Lists.newArrayList();
+    }
+    
     TableKeysAndAttributes batchGetAttributes = new TableKeysAndAttributes(_tableName);
 
     primaryKeys.stream()
@@ -60,7 +65,7 @@ class DynamoStore {
     return new DynamoDBMapper(_client).query(clazz, expression);
   }
 
-  protected  <T> List<T> scan(DynamoDBScanExpression expression, Class<T> clazz) {
+  protected <T> List<T> scan(DynamoDBScanExpression expression, Class<T> clazz) {
     return new DynamoDBMapper(_client).scan(clazz, expression)
         .stream()
         .collect(Collectors.toList());

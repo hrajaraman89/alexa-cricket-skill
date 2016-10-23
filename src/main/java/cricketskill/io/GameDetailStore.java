@@ -3,7 +3,7 @@ package cricketskill.io;
 import com.amazonaws.Protocol;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.google.gson.Gson;
-import cricketskill.model.GameDetail;
+import cricketskill.model.CricketGameDetail;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -21,17 +21,17 @@ public class GameDetailStore extends DynamoStore {
     super(protocol, "CricketGameDetail");
   }
 
-  public Map<Integer, GameDetail> getGames(Set<Integer> id) {
+  public Map<Integer, CricketGameDetail> getGames(Set<Integer> id) {
 
     String primaryKeyName = "id";
 
     return batchGet(id, primaryKeyName)
         .stream()
         .map(GameDetailStore::toGame)
-        .collect(Collectors.toMap(GameDetail::getId, gd -> gd));
+        .collect(Collectors.toMap(CricketGameDetail::getId, gd -> gd));
   }
 
-  private static GameDetail toGame(Item i) {
-    return new Gson().fromJson(i.toJSON(), GameDetail.class);
+  private static CricketGameDetail toGame(Item i) {
+    return new Gson().fromJson(i.toJSON(), CricketGameDetail.class);
   }
 }

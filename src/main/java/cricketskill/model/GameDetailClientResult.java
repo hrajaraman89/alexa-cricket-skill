@@ -8,18 +8,18 @@ import java.util.Map;
 
 public class GameDetailClientResult {
   private int _total;
-  private final List<GameDetail> _items;
+  private final List<CricketGameDetail> _items;
 
-  public GameDetailClientResult(int total, Map<Integer, GameDetail> items) {
+  public GameDetailClientResult(int total, Map<Integer, CricketGameDetail> items) {
     this(total, Lists.newArrayList(items.values()));
   }
 
-  public GameDetailClientResult(int total, List<GameDetail> items) {
+  public GameDetailClientResult(int total, List<CricketGameDetail> items) {
     _total = total;
     _items = items;
   }
 
-  public List<GameDetail> getItems() {
+  public List<CricketGameDetail> getItems() {
     return _items;
   }
 

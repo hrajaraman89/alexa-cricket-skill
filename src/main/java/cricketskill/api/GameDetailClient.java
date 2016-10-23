@@ -3,7 +3,7 @@ package cricketskill.api;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import cricketskill.io.Stores;
-import cricketskill.model.GameDetail;
+import cricketskill.model.CricketGameDetail;
 import cricketskill.model.GameDetailClientResult;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,7 @@ public class GameDetailClient {
 
   private GameDetailClientResult getGameDetailWithoutTracking(Set<Integer> ids, int total) {
 
-    Map<Integer, GameDetail> result = Optional.ofNullable(_stores.getGameDetailStore().getGames(ids))
+    Map<Integer, CricketGameDetail> result = Optional.ofNullable(_stores.getGameDetailStore().getGames(ids))
         .orElse(Maps.newHashMap());
 
     return new GameDetailClientResult(total, result);

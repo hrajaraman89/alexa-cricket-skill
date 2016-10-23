@@ -7,7 +7,7 @@ import cricketskill.model.GameDetailClientResult;
 import org.junit.Test;
 
 
-public class GameDetailClientTest {
+public class CricketGameDetailClientTest {
 
   @Test
   public void testGetDetails()

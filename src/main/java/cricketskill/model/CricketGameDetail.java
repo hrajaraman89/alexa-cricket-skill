@@ -5,8 +5,9 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.google.gson.Gson;
 
 
+@SuppressWarnings({"CheckStyle"})
 @DynamoDBTable(tableName = "CricketGameDetail")
-public class GameDetail {
+public class CricketGameDetail {
   private int id;
   private int teamAId;
   private String teamAName;
@@ -203,7 +204,6 @@ public class GameDetail {
   }
 
   public String toString() {
-    java.lang.String json = new Gson().toJson(this);
-    return json;
+    return new Gson().toJson(this);
   }
 }

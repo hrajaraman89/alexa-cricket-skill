@@ -2,7 +2,7 @@ package cricketskill.api;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import cricketskill.io.DynamoDbClient;
+import cricketskill.io.Stores;
 import cricketskill.model.GameDetail;
 import cricketskill.model.GameDetailClientResult;
 import java.util.List;
@@ -18,15 +18,15 @@ import static cricketskill.common.TrackerUtils.withTracking;
 public class GameDetailClient {
   private static final Logger LOG = LoggerFactory.getLogger(GameDetailClient.class);
 
-  private final DynamoDbClient _dynamoDbClient;
+  private final Stores _stores;
 
-  public GameDetailClient(DynamoDbClient client) {
-    this._dynamoDbClient = client;
+  public GameDetailClient(Stores stores) {
+    _stores = stores;
   }
 
   public GameDetailClientResult getDetails(int start, int count) {
 
-    List<Integer> gameIds = withTracking(_dynamoDbClient::getGameIds, "Get Game Ids", LOG);
+    List<Integer> gameIds = withTracking(_stores.getGameIdsStore()::getGameIds, "Get Game Ids", LOG);
 
     if (gameIds.isEmpty()) {
       return new GameDetailClientResult(0, Maps.newHashMap());
@@ -50,7 +50,7 @@ public class GameDetailClient {
 
   private GameDetailClientResult getGameDetailWithoutTracking(Set<Integer> ids, int total) {
 
-    Map<Integer, GameDetail> result = Optional.ofNullable(_dynamoDbClient.getGames(ids))
+    Map<Integer, GameDetail> result = Optional.ofNullable(_stores.getGameDetailStore().getGames(ids))
         .orElse(Maps.newHashMap());
 
     return new GameDetailClientResult(total, result);

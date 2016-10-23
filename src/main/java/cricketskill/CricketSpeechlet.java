@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -160,7 +159,8 @@ public class CricketSpeechlet implements Speechlet {
 
     Set<Integer> seen = seenGameIds.stream().collect(Collectors.toSet());
 
-    List<GameDetail> items = getNext(count, seen, session.getUser().getUserId());
+    GameDetailClientResult gameDetailClientResult = getNext(count, seen, session.getUser().getUserId());
+    List<GameDetail> items = gameDetailClientResult.getItems();
 
     if (items.isEmpty()) {
       return newTellResponse("There are no more current games", "Score Tracker");
@@ -175,6 +175,10 @@ public class CricketSpeechlet implements Speechlet {
     LOG.info("New seen games is {}", seen);
 
     StringBuilder sb = new StringBuilder();
+
+    if (seenGameIds.isEmpty()) {
+      sb.append(String.format("There are a total of %d games. ", gameDetailClientResult.getTotal()));
+    }
 
     items.forEach(i -> appendDetailToStringBuilder(sb, i));
 
@@ -200,7 +204,7 @@ public class CricketSpeechlet implements Speechlet {
     return SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
-  private List<GameDetail> getNext(int count, Set<Integer> seen, String userId) {
+  private GameDetailClientResult getNext(int count, Set<Integer> seen, String userId) {
 
     GameDetailClientResult result = _client.getDetails();
 
@@ -215,7 +219,7 @@ public class CricketSpeechlet implements Speechlet {
 
     LOG.info("unseen game ids {}", unseen.stream().map(GameDetail::getId).collect(Collectors.toList()));
 
-    return unseen.subList(0, Math.min(count, unseen.size()));
+    return new GameDetailClientResult(result.getTotal(), unseen.subList(0, Math.min(count, unseen.size())));
   }
 
   private static boolean isFavoriteTeamPlaying(GameDetail gd, Set<String> teams) {

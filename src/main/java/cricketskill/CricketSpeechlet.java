@@ -182,6 +182,12 @@ public class CricketSpeechlet implements Speechlet {
 
     items.forEach(i -> appendDetailToStringBuilder(sb, i));
 
+    boolean reachedEndOfUpdate = seen.size() == gameDetailClientResult.getTotal();
+
+    if (reachedEndOfUpdate) {
+      sb.append(" This is the last game.");
+    }
+
     String speechText = sb.toString();
 
     LOG.info("Speech text: {}", speechText);
@@ -201,7 +207,8 @@ public class CricketSpeechlet implements Speechlet {
     Reprompt reprompt = new Reprompt();
     reprompt.setOutputSpeech(outputSpeech);
 
-    return SpeechletResponse.newAskResponse(speech, reprompt, card);
+    return reachedEndOfUpdate ? SpeechletResponse.newTellResponse(speech, card)
+        : SpeechletResponse.newAskResponse(speech, reprompt, card);
   }
 
   private GameDetailClientResult getNext(int count, Set<Integer> seen, String userId) {

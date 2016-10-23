@@ -212,11 +212,11 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
-    sb.append(gd.teamAName)
-        .append(String.format(" %s ", gd.status == MatchStatus.COMPLETE ? "played" : "is playing"))
-        .append(gd.teamBName)
+    sb.append(gd.getTeamAName())
+        .append(String.format(" %s ", gd.getStatusEnum() == MatchStatus.COMPLETE ? "played" : "is playing"))
+        .append(gd.getTeamBName())
         .append(" at ")
-        .append(gd.shortVenue)
+        .append(gd.getShortVenue())
         .append(". ")
         .append(getLiveStatus(gd))
         .append(". ");
@@ -227,18 +227,18 @@ public class CricketSpeechlet implements Speechlet {
 
     sb.append(gd.getBattingTeamName())
         .append(" have scored ")
-        .append(gd.runs)
+        .append(gd.getRuns())
         .append(" runs, at the loss of ")
-        .append(gd.wickets == 0 ? "no" : gd.wickets)
+        .append(gd.getWickets() == 0 ? "no" : gd.getWickets())
         .append(" wickets.")
         .append(" Their run rate is ")
-        .append(gd.runRate);
+        .append(gd.getRunRate());
 
-    if (gd.target > 0) {
+    if (gd.getTarget() > 0) {
       sb.append(". ")
           .append(gd.getBattingTeamName())
           .append(" are chasing ")
-          .append(gd.target)
+          .append(gd.getTarget())
           .append(" runs.");
     }
 

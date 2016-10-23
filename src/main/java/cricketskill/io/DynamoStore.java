@@ -3,7 +3,9 @@ package cricketskill.io;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.document.BatchGetItemOutcome;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
@@ -20,12 +22,13 @@ class DynamoStore {
   private final DynamoDB _dynamoDB;
   private final String _tableName;
   private final Table _table;
+  private final AmazonDynamoDBClient _client;
 
   // use HTTPS if you are testing locally
   protected DynamoStore(Protocol protocol, String tableName) {
-    AmazonDynamoDBClient client = new AmazonDynamoDBClient(new ClientConfiguration().withProtocol(protocol));
+    this._client = new AmazonDynamoDBClient(new ClientConfiguration().withProtocol(protocol));
 
-    this._dynamoDB = new DynamoDB(client);
+    this._dynamoDB = new DynamoDB(_client);
     this._tableName = tableName;
     this._table = _dynamoDB.getTable(tableName);
   }
@@ -49,5 +52,14 @@ class DynamoStore {
     return _dynamoDB.batchGetItem(batchGetAttributes)
         .getTableItems()
         .getOrDefault(_tableName, Lists.newArrayList());
+  }
+
+  protected <T> List<T> query(DynamoDBQueryExpression<T> expression, Class<T> clazz) {
+
+    return new DynamoDBMapper(_client).query(clazz, expression);
+  }
+
+  protected  <T> List<T> scan(DynamoDBScanExpression expression, Class<T> clazz) {
+    return new DynamoDBMapper(_client).scan(clazz, expression);
   }
 }

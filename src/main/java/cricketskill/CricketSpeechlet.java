@@ -48,10 +48,8 @@ public class CricketSpeechlet implements Speechlet {
       "EndIntent",
       (i, s) -> handleEndIntent(),
       "AddFavoriteIntent",
-      (i, s) -> handleAddFavoriteIntent(i ,s)
+      (i, s) -> handleAddFavoriteIntent(i, s)
   );
-
-
 
   public CricketSpeechlet() {
     this(Protocol.HTTP);
@@ -102,7 +100,7 @@ public class CricketSpeechlet implements Speechlet {
 
     String slotValue = slot.getValue();
 
-    LOG.info("Slot value for add favorite {}", slotValue);
+    LOG.info("{} wants to add {}", session.getUser().getUserId(), slotValue);
 
     if (!Character.isUpperCase(slotValue.charAt(0))) {
       return newTellResponse("Sorry, we're having trouble adding that country.", "Score Tracker");
@@ -133,8 +131,7 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   public SpeechletResponse handleCurrentScoreIntent(Session session) {
-    return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, PAGE_LENGTH), "Get current score",
-        LOG);
+    return handleCurrentScoreIntent(session, PAGE_LENGTH);
   }
 
   private SpeechletResponse handleCurrentScoreIntent(Session session, int count) {

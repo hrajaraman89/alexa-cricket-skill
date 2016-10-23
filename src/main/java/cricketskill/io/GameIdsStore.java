@@ -1,9 +1,7 @@
 package cricketskill.io;
 
 import com.amazonaws.Protocol;
-import com.amazonaws.services.dynamodbv2.document.BatchGetItemOutcome;
 import com.amazonaws.services.dynamodbv2.document.Item;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import java.util.Arrays;
@@ -13,20 +11,14 @@ import java.util.stream.Stream;
 
 
 public class GameIdsStore extends DynamoStore {
-  private static final String GAME_IDS = "CricketGameIds";
 
   protected GameIdsStore(Protocol protocol) {
-    super(protocol);
+    super(protocol, "CricketGameIds");
   }
 
   public List<Integer> getGameIds() {
-    String tableName = GAME_IDS;
 
-    BatchGetItemOutcome batchGetItemOutcome = batchGet(Sets.newHashSet("intl"), tableName, "id");
-
-    return batchGetItemOutcome
-        .getTableItems()
-        .getOrDefault(tableName, Lists.newArrayList())
+    return batchGet(Sets.newHashSet("intl"), "id")
         .stream()
         .flatMap(this::toGameIds)
         .collect(Collectors.toList());

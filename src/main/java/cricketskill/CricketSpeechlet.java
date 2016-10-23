@@ -100,9 +100,15 @@ public class CricketSpeechlet implements Speechlet {
 
     Slot slot = intent.getSlot("FavoriteCountry");
 
-    LOG.info("Slot value for add favorite {}", slot.getValue());
+    String slotValue = slot.getValue();
 
-    return newTellResponse("You want to add " + slot.getValue() + " as a favorite.", "Score Tracker");
+    LOG.info("Slot value for add favorite {}", slotValue);
+
+    if (!Character.isUpperCase(slotValue.charAt(0))) {
+      return newTellResponse("Sorry, we're having trouble adding that country.", "Score Tracker");
+    }
+
+    return newTellResponse("You want to add " + slotValue + " as a favorite.", "Score Tracker");
   }
 
   private SpeechletResponse handleEndIntent() {

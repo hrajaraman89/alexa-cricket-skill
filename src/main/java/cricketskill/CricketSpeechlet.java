@@ -40,14 +40,18 @@ public class CricketSpeechlet implements Speechlet {
 
   private final Map<String, BiFunction<Intent, Session, SpeechletResponse>> _intentToHandler = ImmutableMap.of(
       "CurrentScoreIntent",
-      (i, s) -> getCurrentScoreResponse(s),
+      (i, s) -> handleCurrentScoreIntent(s),
       "AMAZON.HelpIntent",
-      (i, s) -> getHelpResponse(),
+      (i, s) -> handleHelpIntent(),
       "NextScoreIntent",
       this::nextScoreIntent,
       "EndIntent",
-      (i, s) -> handleEndIntent()
+      (i, s) -> handleEndIntent(),
+      "AddFavoriteIntent",
+      (i, s) -> handleAddFavoriteIntent(i ,s)
   );
+
+
 
   public CricketSpeechlet() {
     this(Protocol.HTTP);
@@ -92,6 +96,15 @@ public class CricketSpeechlet implements Speechlet {
         .orElseThrow(onError);
   }
 
+  private SpeechletResponse handleAddFavoriteIntent(Intent intent, Session session) {
+
+    Slot slot = intent.getSlot("FavoriteCountry");
+
+    LOG.info("Slot value for add favorite {}", slot.getValue());
+
+    return newTellResponse("You want to add " + slot.getValue() + " as a favorite.", "Score Tracker");
+  }
+
   private SpeechletResponse handleEndIntent() {
     return newTellResponse("Okay, ending.", "Ending score tracker");
   }
@@ -102,7 +115,7 @@ public class CricketSpeechlet implements Speechlet {
     LOG.info("Slot value from number of games is {}", slot.getValue());
 
     int count = Integer.valueOf(slot.getValue());
-    return getCurrentScoreResponse(session, count);
+    return handleCurrentScoreIntent(session, count);
   }
 
   @Override
@@ -113,12 +126,12 @@ public class CricketSpeechlet implements Speechlet {
     // any cleanup logic goes here
   }
 
-  public SpeechletResponse getCurrentScoreResponse(Session session) {
+  public SpeechletResponse handleCurrentScoreIntent(Session session) {
     return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, PAGE_LENGTH), "Get current score",
         LOG);
   }
 
-  private SpeechletResponse getCurrentScoreResponse(Session session, int count) {
+  private SpeechletResponse handleCurrentScoreIntent(Session session, int count) {
     return TrackerUtils.withTracking(() -> getCurrentScoreResponseInternal(session, count), "Get current score", LOG);
   }
 
@@ -210,7 +223,7 @@ public class CricketSpeechlet implements Speechlet {
    *
    * @return SpeechletResponse spoken and visual response for the given intent
    */
-  private SpeechletResponse getHelpResponse() {
+  private SpeechletResponse handleHelpIntent() {
     String speechText = "You can say give me an update on the games to me!";
     String title = "Current Score - Help";
     return newAskResponse(speechText, title);

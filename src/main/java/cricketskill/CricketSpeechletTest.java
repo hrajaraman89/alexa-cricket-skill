@@ -15,7 +15,7 @@ public class CricketSpeechletTest {
         .build();
     session.setAttribute(CricketSpeechlet.START_KEY, 0);
 
-    SpeechletResponse result = new CricketSpeechlet(Protocol.HTTPS).getCurrentScoreResponse(session);
+    SpeechletResponse result = new CricketSpeechlet(Protocol.HTTPS).handleCurrentScoreIntent(session);
 
     System.out.println(result);
   }

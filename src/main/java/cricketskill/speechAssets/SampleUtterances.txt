@@ -16,5 +16,6 @@ EndIntent stop
 EndIntent end
 EndIntent no more scores
 
-OscarIntent which team is the best team
-OscarIntent which team is the best
+AddFavoriteIntent add favorite team {FavoriteCountry}
+AddFavoriteIntent add {FavoriteCountry} to favorites
+AddFavoriteIntent add team {FavoriteCountry} to favorites

@@ -13,10 +13,16 @@
       ]
     },
     {
-      "intent": "EndIntent"
+      "intent": "AddFavoriteIntent",
+      "slots": [
+        {
+          "name": "FavoriteCountry",
+          "type": "CRICKET_COUNTRIES"
+        }
+      ]
     },
     {
-      "intent": "OscarIntent"
+      "intent": "EndIntent"
     },
     {
       "intent": "AMAZON.HelpIntent"

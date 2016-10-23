@@ -23,7 +23,7 @@ public class GameDetailStore extends DynamoStore {
     return batchGet(id, primaryKeyName)
         .stream()
         .map(GameDetailStore::toGame)
-        .collect(Collectors.toMap(GameDetail::getId, gd -> gd));
+        .collect(Collectors.toMap(gd -> gd.id, gd -> gd));
   }
 
   private static GameDetail toGame(Item i) {

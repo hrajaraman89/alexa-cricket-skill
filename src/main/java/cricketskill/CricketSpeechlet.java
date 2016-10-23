@@ -212,14 +212,37 @@ public class CricketSpeechlet implements Speechlet {
   }
 
   private static void appendDetailToStringBuilder(StringBuilder sb, GameDetail gd) {
-    sb.append(gd.getTeamAName())
-        .append(String.format(" %s ", gd.getStatus() == MatchStatus.COMPLETE ? "played" : "is playing"))
-        .append(gd.getTeamBName())
+    sb.append(gd.teamAName)
+        .append(String.format(" %s ", gd.status == MatchStatus.COMPLETE ? "played" : "is playing"))
+        .append(gd.teamBName)
         .append(" at ")
-        .append(gd.getShortVenue())
+        .append(gd.shortVenue)
         .append(". ")
-        .append(gd.getLiveStatus())
+        .append(getLiveStatus(gd))
         .append(". ");
+  }
+
+  private static String getLiveStatus(GameDetail gd) {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append(gd.getBattingTeamName())
+        .append(" have scored ")
+        .append(gd.runs)
+        .append(" runs, at the loss of ")
+        .append(gd.wickets == 0 ? "no" : gd.wickets)
+        .append(" wickets.")
+        .append(" Their run rate is ")
+        .append(gd.runRate);
+
+    if (gd.target > 0) {
+      sb.append(". ")
+          .append(gd.getBattingTeamName())
+          .append(" are chasing ")
+          .append(gd.target)
+          .append(" runs.");
+    }
+
+    return sb.toString();
   }
 
   private SpeechletResponse getWelcomeResponse() {

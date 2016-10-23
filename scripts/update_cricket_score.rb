@@ -58,6 +58,20 @@ def update_cricket_database()
 
     cricket_game = JSON.parse open("http://www.espncricinfo.com/ci/engine/match/#{game_id}.json").read
     cricket_match = cricket_game['match']
+    cricket_innings = cricket_game['innings']
+
+    current_innings = cricket_innings[0]
+
+    cricket_innings.each { |innings|
+      if innings['live_current'] == '1'
+        current_innings = innings
+        break
+      end
+    }
+
+    winnerId = cricket_match['winner_team_id'] || '0'
+    jsonStatus = cricket_match['match_status'].upcase || 'DORMANT'
+    realStatus = winnerId == '0' ? jsonStatus : 'COMPLETE'
 
     item = {
         'id' => i.to_i,
@@ -68,10 +82,18 @@ def update_cricket_database()
         'teamBId' => cricket_match['team2_country_id'],
         'venue' => cricket_match['ground_name'],
         'shortVenue' => cricket_match['ground_small_name'],
-        'status' => cricket_match['match_status'].upcase || 'DORMANT',
+        'status' => realStatus,
         'liveStatus' => cricket_game['live']['status'],
-        'winnerId' => cricket_match['winner_team_id'] || 0,
-        'lastUpdated' => Time.now.utc.to_i
+        'winnerId' => winnerId,
+        'lastUpdated' => Time.now.utc.to_i,
+        'battingTeamId' => current_innings['batting_team_id'],
+        'bowlingTeamId' => current_innings['bowling_team_id'],
+        'runs' => current_innings['runs'],
+        'runRate' => current_innings['run_rate'],
+        'wickets' => current_innings['wickets'],
+        'target' => current_innings['target'],
+        'overs' => current_innings['overs']
+
     }
 
     row = {

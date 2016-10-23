@@ -1,76 +1,34 @@
 package cricketskill.model;
 
-import com.google.gson.Gson;
-
-
 public class GameDetail {
-  private int id;
-  private int teamAId;
-  private String teamAName;
-  private int teamBId;
-  private String teamBName;
-  private String venue;
-  private String shortVenue;
-  private MatchStatus status;
-  private String liveStatus;
-  private int winnerId;
-  private long lastUpdated;
+  public int id;
+  public int teamAId;
+  public String teamAName;
+  public int teamBId;
+  public String teamBName;
+  public String venue;
+  public String shortVenue;
+  public MatchStatus status;
+  public String liveStatus;
+  public int winnerId;
+  public long lastUpdated;
+  public int battingTeamId;
+  public int bowlingTeamId;
+  public int runs;
+  public int target;
+  public double runRate;
+  public int wickets;
+  public String overs;
 
-  public int getId() {
-    return id;
+  public String getBowlingTeamName() {
+    return getNameForId(bowlingTeamId);
   }
 
-  public String getVenue() {
-    return venue;
+  public String getBattingTeamName() {
+    return getNameForId(battingTeamId);
   }
 
-  public String toString() {
-    return new Gson().toJson(this);
-  }
-
-  private GameDetail setStatus(MatchStatus status) {
-    this.status = status;
-    return this;
-  }
-
-  public MatchStatus getStatus() {
-
-    if (status == MatchStatus.CURRENT && winnerId != 0) {
-      setStatus(MatchStatus.COMPLETE);
-    }
-
-    return status;
-  }
-
-  public String getLiveStatus() {
-    return liveStatus;
-  }
-
-  public int getWinnerId() {
-    return winnerId;
-  }
-
-  public long getLastUpdated() {
-    return lastUpdated;
-  }
-
-  public String getShortVenue() {
-    return shortVenue;
-  }
-
-  public int getTeamBId() {
-    return teamBId;
-  }
-
-  public String getTeamBName() {
-    return teamBName;
-  }
-
-  public int getTeamAId() {
-    return teamAId;
-  }
-
-  public String getTeamAName() {
-    return teamAName;
+  private String getNameForId(int id) {
+    return id == teamAId ? teamAName : teamBName;
   }
 }
